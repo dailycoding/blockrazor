@@ -1,8 +1,8 @@
 import { Meteor } from 'meteor/meteor'
 import { check } from 'meteor/check'
-import { log } from '/server/main'
 import { Bounties, REWARDCOEFFICIENT, UserData, Developers, Codebase, Currencies, Ratings, RatingsTemplates } from '/imports/api/indexDB.js'
 import { creditUserWith, removeUserCredit } from '/imports/api/utilities.js'
+import { log } from '/imports/api/utilities'
 
 //previously codebaserank.js in server
 

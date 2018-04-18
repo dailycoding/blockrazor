@@ -1,9 +1,29 @@
 import { Meteor } from 'meteor/meteor';
 import { UserData} from '/imports/api/indexDB.js';
-import { log } from '/server/main'
+import Analytics from 'analytics-node'
+var analytics = new Analytics('auAfRv1y0adOiVyz1TZB9nl18LI9UT98')
+
 import { updateUsersStats } from './usersStats'
 
+
+import { log } from '/imports/api/utilities'
+
 //is in fact server only file
+
+ /* function to init segment users, this is required 
+for us to map userId in meteor to transactions in 
+segment.io */
+
+function initSegmentIOUser(userId,email,fullname){
+  analytics.identify({
+  userId:userId,
+  traits: {
+    name: fullname,
+    email: email,
+    createdAt: new Date()
+  }
+});
+}
 
 Meteor.users.friendlySlugs({
   slugFrom: 'username',
@@ -33,6 +53,10 @@ Accounts.validateLoginAttempt(function(result){
   });
   
   Accounts.onLogin(function(user){
+
+     //init segment.IO user
+    initSegmentIOUser(user.user._id,user.user.username,user.user.email)
+    
         //let's check if the user has logged in multiple users on the same ip address 
         Meteor.call('getUserConnectionInfo',
           (error, result) => {

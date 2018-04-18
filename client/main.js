@@ -1,6 +1,7 @@
 import { Accounts } from 'meteor/accounts-base';
 import '/imports/startup/client';
-import { UserData, Features, Summaries, Redflags } from '/imports/api/indexDB.js';
+import { UserData, Features, Summaries, Redflags, Currencies } from '/imports/api/indexDB.js';
+window.Currencies = Currencies
 
 const collections = { Features, Summaries, Redflags }
 
@@ -56,7 +57,11 @@ Template.registerHelper('isDeveloper', () => {
    })
 
    Template.registerHelper('subsCacheReady', () => {
-       return SubsCache.ready()
+    var ready = true
+        for (var x in SubsCache.cache){
+            ready = SubsCache.cache[x].ready() && ready
+        }
+    return ready
    })
 
 
@@ -76,7 +81,9 @@ Template.registerHelper('relativeTime', function(date) {
 });
 
 Template.registerHelper('nlToBr', function(value) {
-    return value.replace(/(?:\r\n|\r|\n)/g, '<br />');
+    if (value) {
+        return value.replace(/(?:\r\n|\r|\n)/g, '<br />');
+    }
 });
 
 Template.registerHelper('hasUserVoted', (collection, collectionId, direction) => {
@@ -201,7 +208,17 @@ transactionTypes = function(type) {
 }
 
 Template.registerHelper('transactionTypes', (transaction) => {
-        transactionTypes(transaction);
+        return transactionTypes(transaction);
+})
+
+Template.registerHelper('timestampToDatetime', (timestamp) => {
+		return new Date(timestamp).toLocaleString([], {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric',
+			hour: '2-digit',
+			minute:'2-digit'
+		});
 })
 
 if (window.location.hash) {

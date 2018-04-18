@@ -27,7 +27,7 @@ Template.moderatorPendingCurrency.events({
       'click #review': function(data,templateInstance) {
         data.preventDefault();
 
-        $('.reviewCurrencyModal').modal('show');
+        $('.reviewCurrencyModal-'+this._id).modal('show');
 
         Meteor.call('reviewCurrency', this._id, (err, data) => {
 
@@ -46,18 +46,23 @@ Template.moderatorPendingCurrency.events({
             if (err) {
                 swal({
                     icon: "error",
-                    text: "You can't approve your own currency",
+                    text: err.error,
                     button: { className: 'btn btn-primary' }
                 });
-            }else{
-              $('.reviewCurrencyModal').modal('hide');
             }
+            
+            $('.reviewCurrencyModal-'+this._id).modal('hide');
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
         })
     },
     'click #reject': function(data, templateInstance) {
         data.preventDefault();
 
-        $('.reviewCurrencyModal').modal('hide');
+        // As accessing parent template just after firing modal(hide), the modal won't completely close. need to manually remove backdrop
+        $('.reviewCurrencyModal-'+this._id).modal('hide');
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
         Meteor.call('setRejected', this._id, true);
         templateInstance.parent.currentlyRejecting.set(this._id)
         templateInstance.parent.reject.set(true)

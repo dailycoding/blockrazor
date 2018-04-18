@@ -1,18 +1,8 @@
 #topnav{
   z-index: 1000 !important;
-  position: fixed;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 60px;
-  background: #fff;
+  height:60px;
   z-index: 9;
-  display: flex;
-  align-items: center;
-  flex-direction: row;
-  justify-content: space-between;
-  flex-wrap: nowrap;
-  padding: 0;
   &:after{
     bottom: -5px;
     box-shadow: inset 0px 4px 8px -3px rgba(17, 17, 17, .06);
@@ -26,19 +16,28 @@
     width: 100%;
     z-index: 2050;
   }
-  > div{
-    display: flex;
-    align-items: center;
-    height: 100%;
+  .separator {
+    content: '';
+    display: inline-block;
+    background: #666;
+    margin: 0px 10px 0 0; 
+    width: 1px;
+    vertical-align: top;
   }
+  .bounties-icon {
+    margin-left: 10px; 
+  }
+
   button, a{
     display: flex;
     align-items: center;
-    height: 100%;
     outline: none;
-    color: #1a1a1a;
     border: none;
+    color:#fff !important;
     box-shadow: none;
+   &:hover {
+        color:#999999 !important;
+    }
     &:active, &:focus{
       outline: none;
       border: none;
@@ -48,9 +47,35 @@
   .navbar-brand{
     margin: 0;
   }
+  .brand-image:hover {
+    opacity: 0.7;
+  }
+  .left-nav-item{
+    min-width: 60px;
+    padding-right: 40px;
+    position: relative;
+    display: flex;
+    .separator {
+      content: '';
+      display: inline-block;
+      background: #666;
+      margin: 0px 10px 0 0; 
+      width: 1px;
+      vertical-align: top;
+    }
+    a {
+      text-decoration: none !important;
+    }
+  }
+
+  .badge{
+    position: relative;
+    display: inline-block;
+    margin-top: -6px;
+  }
   .right-nav-item{
     padding-right: 40px;
-    .notifications{
+
       position: relative;
       height: 100%;
       display: flex;
@@ -70,10 +95,9 @@
         span{
           position: absolute;
           top: 5px;
-          right: 5px;
+          right: -5px;
         }
       }
-    }
   }
   @media (max-width: 768px) {
     .github-corner{

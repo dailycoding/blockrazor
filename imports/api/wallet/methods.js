@@ -1,8 +1,8 @@
 import { Meteor } from 'meteor/meteor'
 import { Wallet, WalletImages, Currencies, Ratings, Bounties, REWARDCOEFFICIENT } from '/imports/api/indexDB.js'
-import { log } from '/server/main.js'
 import { creditUserWith, removeUserCredit } from '/imports/api/utilities.js'
-import { sendMessage } from '/imports/api/activityLog/server/methods'
+import { sendMessage } from '/imports/api/activityLog/methods'
+import { log } from '/imports/api/utilities'
 
 Meteor.methods({
 	initializeWallet: function() {
@@ -266,7 +266,15 @@ Meteor.methods({
 	},
 
 	totalAmount: () => {
-		let transactions = Wallet.find({}).fetch()
+		let transactions = Wallet.find({
+			$or: [{
+		        currency: 'KZR'
+		    }, {
+		      	currency: {
+		       		$exists: false
+		       	}
+		    }]
+		}).fetch()
 		let sum = 0
 
 		transactions.forEach(i => {
@@ -274,7 +282,7 @@ Meteor.methods({
 			sum += (((i.from === 'System' || i.from === 'Blockrazor') && !isNaN(i.amount)) ? i.amount : 0)
 		})
 
-		return sum.toFixed(2)
+		return  parseFloat(sum).toFixed(2)
 	},
 
 	transactions: (page,rewardType) => {
@@ -303,7 +311,8 @@ Meteor.methods({
 				owner: 1,
 				from: 1,
 				amount: 1,
-				rewardType:1
+				rewardType: 1,
+				currency: 1
 			},
 			skip: (page - 1) * 10,
 			limit: 10 // show 10 transactions per page

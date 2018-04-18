@@ -19,22 +19,8 @@ import '/imports/api/problems/server/publications'
 import '/imports/api/exchanges/server/publications'
 
 
-//server methods
-import '/imports/api/coins/server/methods'
-import '/imports/api/wallet/server/methods'
-import '/imports/api/activityLog/server/methods'
-import '/imports/api/developers/server/methods'
-import '/imports/api/users/server/methods'
-import '/imports/api/communities/server/methods'
-import '/imports/api/hashing/server/methods'
-import '/imports/api/auctions/server/methods'
-import '/imports/api/rewards/server/methods'
-import '/imports/api/summaries/server/methods'
-import '/imports/api/problems/server/methods'
-import '/imports/api/common/votes'
-import '../../api/bounties/server/methods.js'
-import '/imports/api/ratings/server/methods'
-
+//server methods- don't make these, they get bundled with client and are callable from client anyhow, only detracts optimistc UI
+import '/imports/api/coins/server/methods.js'
 
 // import './fastRender.js'
 import './fixtures.js'
@@ -47,4 +33,5 @@ import '/imports/api/problems/server/startup'
 // collection configs
 import '/imports/api/users/users.js'
 import '/imports/api/users/usersStats.js'
+import '/imports/api/users/server/startup'
 import '/imports/api/coins/currencies.js'

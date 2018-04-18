@@ -5,18 +5,22 @@
   "scripts": {
     "start": "meteor run",
     "debug": "meteor run --inspect",
-    "lint": "./node_modules/.bin/eslint . --fix"
+    "lint": "./node_modules/.bin/eslint . --fix",
+    "test": "jest --testMatch \"**/?(*.)(jest-test).js?(x)\" --passWithNoTests --watch"
   },
   "dependencies": {
+    "analytics-node": "^3.2.0",
     "babel-runtime": "^6.26.0",
     "bcrypt": "^1.0.3",
     "body-parser": "^1.18.2",
+    "bootstrap": "^4.1.0",
     "bootstrap-slider": "^10.0.0",
     "chart.js": "^2.7.1",
     "core-js": "^2.5.3",
     "corejs-typeahead": "^1.2.1",
     "disposable-email": "^0.2.3",
     "fibers": "^2.0.0",
+    "hammerjs": "^2.0.8",
     "jquery-validation": "^1.17.0",
     "js-cookie": "^2.2.0",
     "later": "^1.2.0",
@@ -25,6 +29,7 @@
     "meteor-node-stubs": "~0.2.4",
     "mime-types": "^2.1.17",
     "moment": "^2.20.1",
+    "popper.js": "^1.14.3",
     "recaptcha-v2": "^0.1.3",
     "scrollmagic": "^2.0.5",
     "simpl-schema": "^1.4.2",
@@ -33,6 +38,11 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-jest": "^22.4.3",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "blaze-renderer": "^0.9.0",
     "eslint": "^4.19.1",
     "eslint-config-standard": "^11.0.0",
     "eslint-plugin-import": "^2.10.0",

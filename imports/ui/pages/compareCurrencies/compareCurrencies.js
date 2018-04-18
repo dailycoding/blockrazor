@@ -15,7 +15,7 @@ import {
 } from 'meteor/staringatlights:flow-router'
 
 import '/imports/ui/components/typeahead'
-import './compareCurrencies.css'
+import './compareCurrencies.scss'
 import './compareCurrencies.html'
 
 import { radarEvent, intersection } from '/imports/api/utilities'
@@ -28,15 +28,50 @@ Template.compareCurrencies.onCreated(function () {
 		SubsCache.subscribe('features')
 		SubsCache.subscribe('redflags')
 	})
-	
+
+	this.randomizeColors = () => {
+		Object.keys(this.colors.all()).forEach(i => {
+			let color = '#' + (Math.random() * 0xFFFFFF << 0).toString(16)
+			this.colors.set(i, color)
+		})
+
+		this.radarchart.data.datasets = this.radarchart.data.datasets.map(i => {
+			let color = this.colors.get(i.label)
+			if (color) {
+				let rgb = parseInt(color.substring(1), 16)
+
+				return _.extend(i, {
+					borderColor: color,
+					pointBackgroundColor: color,
+					backgroundColor: `rgba(${(rgb >> 16) & 255}, ${(rgb >> 8) & 255}, ${rgb & 255}, 0.2)`
+				})
+			}
+
+			return i
+		})
+
+		this.barchart.data.datasets = this.barchart.data.datasets.map(i => {
+			let color = this.colors.get(i.label)
+
+			if (color) {
+				let rgb = parseInt(color.substring(1), 16)
+
+				return _.extend(i, {
+					borderColor: color,
+					backgroundColor: `rgba(${(rgb >> 16) & 255}, ${(rgb >> 8) & 255}, ${rgb & 255}, 0.2)`
+				})
+			} 
+
+			return i
+		})
+
+		this.barchart.update()
+		this.radarchart.update()
+	}
+
 	//used to init from route params and in typeAhead events
 	this.curryEvent = function(event, value, templateInstance){
 		cmpArr = templateInstance.compared.get()
-
-		// don't add a new currency if it's already on the graph
-		if (~cmpArr.indexOf(value.currencySymbol)) {
-			return 
-		}
 
 		cmpArr.push(value.currencySymbol)
 		templateInstance.compared.set(cmpArr)
@@ -100,6 +135,12 @@ Template.compareCurrencies.onCreated(function () {
 
 		let nums = [development, codebase, community, distribution, decentralization]
 
+		let filterAlreadyAddedCurrency = (dataset, key) => {
+			return dataset.filter((obj, pos, arr) => {
+				return arr.map(mapObj => mapObj[key]).indexOf(obj[key]) === pos;
+			})
+		}
+
 		// push the new data to the chart
 		templateInstance.radarchart.data.datasets.push({
 			label: value.currencySymbol,
@@ -112,6 +153,12 @@ Template.compareCurrencies.onCreated(function () {
 			data: nums
 		})
 
+		// filter any currency data that had already been added
+		if(templateInstance.barchart.data.datasets.length >= 1) {
+			var radarChartData = templateInstance.radarchart.data.datasets;
+			templateInstance.radarchart.data.datasets = filterAlreadyAddedCurrency(radarChartData, 'label');
+		}
+
 		templateInstance.barchart.data.datasets.push({
 			label: value.currencySymbol,
 			backgroundColor: `rgba(${(rgb >> 16) & 255}, ${(rgb >> 8) & 255}, ${rgb & 255}, 0.2)`,
@@ -119,6 +166,12 @@ Template.compareCurrencies.onCreated(function () {
 			borderWidth: 1,
 			data: [hashpower, 7, wallet, 3]
 		})
+
+		// filter any currency data that had already been added
+		if(templateInstance.barchart.data.datasets.length >= 1) {
+			var barChartData = templateInstance.barchart.data.datasets;
+			templateInstance.barchart.data.datasets = filterAlreadyAddedCurrency(barChartData, 'label');
+		}
 
 		// update the chart to reflect new data
 		templateInstance.radarchart.update()
@@ -170,12 +223,12 @@ Template.compareCurrencies.onRendered(function () {
 			}]
 		},
 		options: {
-			responsive: false,
+			responsive: true,
 			defaultFontColor: 'red',
 			tooltips: {
 				enabled: false
 			},
-			maintainAspectRatio: false,
+			maintainAspectRatio: true,
 			title: {
 				display: false
 			},
@@ -188,10 +241,6 @@ Template.compareCurrencies.onRendered(function () {
 				}
 			},
 			scale: {
-				pointLabels: {
-					fontSize: 14
-				},
-
 				// Hides the scale
 				display: true
 			}
@@ -311,6 +360,11 @@ Template.compareCurrencies.events({
 			path: path
 		}, 'compareCurrencies', path) // replace the url field in the browser without reloading the page
 	},
+	'click #js-randomize': (event, templateInstance) => {
+		event.preventDefault()
+
+		templateInstance.randomizeColors()
+	}
 })
 
 Template.compareCurrencies.helpers({

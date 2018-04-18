@@ -1,12 +1,12 @@
 import { Meteor } from 'meteor/meteor'
-
-import { UserData, Bounties } from '/imports/api/indexDB.js';
-import { APICalls } from '/server/serverdb/APICalls.js';
-import { creditUserWith } from '../../utilities.js';
-
-import {REWARDCOEFFICIENT} from '../REWARDCOEFFICIENT' //needed on client
-
-import { sendMessage } from '/imports/api/activityLog/server/methods'
+import { UserData, Bounties, REWARDCOEFFICIENT } from '/imports/api/indexDB.js';
+import { creditUserWith } from '/imports/api/utilities.js';
+import { sendMessage } from '/imports/api/activityLog/methods'
+if (Meteor.isServer){
+  import { APICalls } from '/server/serverdb/APICalls.js';
+} else {
+  let APICalls = {insert(){}}
+}
 
 Meteor.methods({
   rejectBounty: function(bountyId, reason) {
@@ -114,21 +114,24 @@ Meteor.methods({
       }
     })
 
-    let date = Date.now()
-
-    Bounties.update({
-      type: type,
-      userId: Meteor.userId(),
-      completed: false
-    }, {
-      $set: {
-        completed: true,
-        completedAt: date,
-        id: id
-      }
-    })
-
-    Meteor.call('saveLastData', b._id, date, (err, data) => {})
+    // if bounty found
+    if (b) {
+      let date = Date.now()
+      
+      Bounties.update({
+        type: type,
+        userId: Meteor.userId(),
+        completed: false
+      }, {
+        $set: {
+          completed: true,
+          completedAt: date,
+          id: id
+        }
+      })
+  
+      Meteor.call('saveLastData', b._id, date, (err, data) => {})
+    }
   },
   deleteNewBounty: (id, token) => {
     if (token === 's3rver-only')

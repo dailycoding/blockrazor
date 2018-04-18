@@ -12,10 +12,16 @@
 .currencyFilterModal{
 
   .date-slider-container{
-    padding: 5px 20px 15px 20px;
+    padding: 5px 30px 15px 30px;
     .date-slider {
       display: inline-block;
     }
+  }
+
+  .horizontal-separator {
+    border-top: 1px solid #cccccc;
+    width: 100%;
+    display: inline-block;
   }
 
   .apply-filter-button {

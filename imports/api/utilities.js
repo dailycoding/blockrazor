@@ -1,7 +1,24 @@
 import { Mongo } from 'meteor/mongo';
 //export var Rewards = new Mongo.Collection('rewards');
-import { UserData, Currencies, Wallet, GraphData } from '/imports/api/indexDB.js';
+import { UserData, Currencies, Wallet, GraphData, AppLogs } from '/imports/api/indexDB.js'
+import { Logger } from 'meteor/ostrio:logger'; 
+import { LoggerMongo } from 'meteor/ostrio:loggermongo'
+// to prevent code duplication and redundancy, we simply export the logger so other files can use it easily
+let log = {}
 
+if (Meteor.isServer) {
+  log = new Logger();
+  (new LoggerMongo(log, {
+    collection: AppLogs
+  })).enable()
+} else {
+  log = {
+    error: console.err,
+    info: console.log
+  }
+}
+
+export { log }
 
 var rewards = {
   planned: 1,
@@ -150,7 +167,7 @@ export var rewardCurrencyCreator = function(launchTags, owner, currencyName) {
     let reason = "submitting " + currencyName.toString();
     console.log(reason);
 
-    creditUserWith(rewardAmount, owner, reason);
+    creditUserWith(rewardAmount, owner, reason, 'newCurrency');
   }) // parseFloat(getRewardFor(rewardType, false));
 
   return true;
@@ -225,8 +242,10 @@ export class LocalizableCollection extends Mongo.Collection {
     }
   }
   populateLocal(){
+
     if (!this.populating){
       this.populating = true
+      if(this.methodName){
       Meteor.call(this.methodName, (err, res) => {
         res.forEach(x => {
           this.local.insert(x)
@@ -234,6 +253,7 @@ export class LocalizableCollection extends Mongo.Collection {
         this.ready = true
         this.readyDep.changed()
       })
+    }
       return this.ready
     } else {
       return this.ready
@@ -241,7 +261,7 @@ export class LocalizableCollection extends Mongo.Collection {
   }
   //careful about updating this as it will be used within server
   //permits optimistic UI using local methods
-  update(selector={}, update){
+  update(selector, update){
     if (this.ready) {
       this.local.update(selector, update)
     }
@@ -252,5 +272,56 @@ export class LocalizableCollection extends Mongo.Collection {
       this.local.insert(update)
     }
     return super.insert(update)
+  }
+  //update local collection on change of liver query
+  //is the same as findOne
+  find(selector={}, projection={}){
+    // var query = findOne? super.findOne: super.find
+    if (Meteor.isClient) {
+      if (!this.ready) {
+        return super.find(selector, projection)
+      } else {
+          var res = super.find(selector, projection)
+          var self = this
+          //if called within tracker begins observing query and destroys it once the tracker that called is invalidated
+          if (Tracker.active){
+          var computation = Tracker.currentComputation
+          var observeHandle = res.observeChanges({
+            changed(id, fields){
+              self.local.update(id, {$set: fields})
+            },
+            added(id, fields){
+              self.local.upsert(id, {$set: Object.assign({_id: id}, fields)})
+            }, 
+            removed(id){
+              self.local.remove(id)
+            }
+          })
+          computation.onInvalidate(function(){
+            observeHandle.stop()
+          })
+        }
+          return res
+      }
+    } else {
+      return super.find(selector, projection)
+    }
+  }
+  //fetch() isn't a colleciton method so comment below doesn't happen
+  //updates local collection if find was used non-reactively and thus passed without observer and local collection is in use
+  findOne(selector={}, projection={}){
+        if (Meteor.isClient) {
+          if (!this.ready) {
+            return super.findOne(selector, projection)
+          } else {
+            var res = super.findOne(selector, projection)
+            if (res) {
+              this.local.update(res._id, res)
+            }
+              return res
+          }
+        } else {
+          return super.findOne(selector, projection)
+        }
   }
 }

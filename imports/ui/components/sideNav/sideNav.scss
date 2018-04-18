@@ -1,6 +1,6 @@
 #sidebar {
   position: fixed;
-  top: 60px;
+  top: 60px !important;
   overflow-y: hidden;
   min-width: 225px;
   max-width: 225px;
@@ -62,26 +62,12 @@
   left: 0;
   right: -25px;
 
-  #sidebar-close-arrow:before {
-    font-family: FontAwesome;
-    content: "\f00d";
-    display: inline-block;
-    padding-left: 10px;
-    padding-right: 25px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    color: #999;
-    vertical-align: middle;
-    float: right;
-  }
-
   .sign-in-button {
     margin-bottom: 15px;
   }
 }
 
 .nav-side-menu {
-  font-family: verdana;
   font-size: 12px;
   font-weight: 200;
   background-color: #ddd;

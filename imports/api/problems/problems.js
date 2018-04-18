@@ -6,7 +6,7 @@ import { LocalizableCollection } from '../utilities'
 let Problems = {}
 
 if (!Meteor.isTest) {
-	Problems = new LocalizableCollection('problems')
+	Problems = new LocalizableCollection('problems', "fetchProblems")
 } else {
 	Problems = new Mongo.Collection('problems')
 }
@@ -23,6 +23,7 @@ Problems.schema = new SimpleSchema({
 	text: { type: String },
 	images: {type: Array, required: false},
 	"images.$": { type: String },
+	bounty: {type: Number, required: false},
 	createdBy: { type: Id },
 	date: { type: Integer },
 	credit: { type: Array },

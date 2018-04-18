@@ -4,6 +4,8 @@ import { FlowRouter } from 'meteor/staringatlights:flow-router'
 
 import './problems.html'
 
+window.Problems = Problems
+
 Template.problems.onCreated(function() {
 	this.autorun(() => {
 		SubsCache.subscribe('problems')
@@ -22,6 +24,9 @@ Template.problems.events({
 		event.preventDefault()
 		$('#addProblemButton').removeClass('disabled not-allowed');
 		templateInstance.filter.set($(event.currentTarget).val())
+	},
+	'submit #problemsFilter': (event, templateInstance) => {
+		event.preventDefault()
 	},
 	'change #js-level': (event, templateInstance) => {
 		event.preventDefault()

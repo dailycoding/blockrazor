@@ -32,11 +32,18 @@ Template.transactions.onCreated(function() {
 	})
 
 	Meteor.call('totalAmount', (err, data) => { // get the total nubmer of transactions for pagination
-		this.total.set(data)
+	    if (err) {
+	        console.log(err)
+	    } else {
+	        this.total.set(data)
+	    }
 	})
 })
 
 Template.transactions.helpers({
+	currency: function() {
+		return this.currency || 'KZR'
+	},
 	transactions: () => Template.instance().transactions.get(),
 	from: function() {
 		return (this.from === 'System' || this.from === 'Blockrazor') ? 'Master wallet' : (Meteor.users.findOne({
@@ -49,7 +56,8 @@ Template.transactions.helpers({
 		}) || {}).username || ''
 	},
 	amount: function() {
-		return this.amount > 0.00001 ? this.amount : this.amount.toExponential(3)
+		let amount = this.amount;
+		return amount;
 	},
 	color: function() {
 		return this.amount > 0 ? 'green' : 'red'

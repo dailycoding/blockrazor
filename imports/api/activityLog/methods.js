@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor'
 import { ActivityLog } from '/imports/api/indexDB.js'
-import { log } from '/server/main.js'
+import { log } from '/imports/api/utilities'
 
 export const sendMessage = function(userId, message, from) {
     ActivityLog.insert({

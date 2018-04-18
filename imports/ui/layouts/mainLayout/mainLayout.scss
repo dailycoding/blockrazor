@@ -20,10 +20,6 @@
 }
 
 #sidebar {
-  overflow: hidden;
-}
-.app-content.active{
-  margin-right: 0;
-  margin-left: 250px;
-  max-width: 100%;
+  top:86px !important;
+  overflow: scroll;
 }
