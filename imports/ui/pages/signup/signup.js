@@ -1,7 +1,8 @@
 import { Template } from 'meteor/templating'
-import { FlowRouter } from 'meteor/staringatlights:flow-router';
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
 
 import './signup.html'
+import '../signin/signin.scss'
 
 Template.signup.events({
 	'submit #signUp': (event, templateInstance) => {
@@ -17,14 +18,14 @@ Template.signup.events({
 					if (!err) {
 						FlowRouter.go(window.last || '/')
 					} else {
-						sAlert.error(err.reason)
+						sAlert.error(TAPi18n.__(err.reason))
 					}
 				})
 			} else {
-				sAlert.error('Passwords don\'t match!')
+				sAlert.error(TAPi18n.__('user.signup.passwords'))
 			}
 		} else {
-			sAlert.error('Fields can\'t be empty!')
+			sAlert.error(TAPi18n.__('user.signup.empty'))
 		}
 	}
 })

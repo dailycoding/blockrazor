@@ -24,10 +24,17 @@ Template.returnedCurrencies.onCreated(function bodyOnCreated() {
   var self = this
   self.autorun(function () {
     SubsCache.subscribe('usersStats')
-    SubsCache.subscribe('redflags')
-    SubsCache.subscribe('usersStats')
+    SubsCache.subscribe('redflagsHome')
   })
-  this.searchInputFilter = new ReactiveVar(undefined);
+ // this.searchInputFilter = new ReactiveVar(undefined);
+  this.filter = new ReactiveVar({})
+  this.searchInputFilter = new ReactiveVar(FlowRouter.current().queryParams.query || '')
+
+  this.totalCurrencies = new ReactiveVar(0)
+
+  Meteor.call('getTotalCurrencies', (err, data) => this.totalCurrencies.set(data))
+
+
   this.increment = 15
   this.limit = new ReactiveVar(this.increment)
   self.autorun((comp) => {
@@ -45,7 +52,7 @@ Template.returnedCurrencies.onCreated(function bodyOnCreated() {
       }
     })
   })
-  this.searchInputFilter = new ReactiveVar(undefined);
+ 
   this.filter = new ReactiveVar({})
   this.currenciesShown = new ReactiveVar(0) // used to tell if list has rendered
   this.countReady = new ReactiveVar(false) //used to tell wether to show count, count occurs once local collection is populated
@@ -203,6 +210,10 @@ Template.returnedCurrencies.onCreated(function bodyOnCreated() {
 });
 
 Template.returnedCurrencies.onRendered(function () {
+
+  //show the menu if its hidden, sometimes it doesn't show when logging in so let's force it
+  $('body').addClass('sidebar-md-show')
+
   // init controller
   this.controller = new scrollmagic.Controller();
   var templ = Template.instance()
@@ -252,9 +263,19 @@ Template.returnedCurrencies.onRendered(function () {
     formatter
   });
 
+  //only show the filter on the home page. This method breaks meteor design but its quick and works #yolo
+  $('.filterComponent').show();
+
 });
 
 Template.returnedCurrencies.helpers({
+  searchActive () {
+    let templ = Template.instance()
+    if (templ.searchInputFilter.get()) {
+      return true
+    }
+    return false
+  },
   noFeatured: () => Template.instance().noFeatured.get(),
   currencies() {
     var templ = Template.instance()
@@ -300,6 +321,10 @@ Template.returnedCurrencies.helpers({
     templateVars.forEach(templateVar => {
       let currency = Redflags.findOne({
         currencyId: templateVar._id
+      }, {
+        sort: {
+          rating: -1
+        }
       }) || {};
 
       templateVar['top_red_flag'] = currency.name;
@@ -308,12 +333,14 @@ Template.returnedCurrencies.helpers({
     return templateVars;
   },
   onlineUsers() {
-    let connectionUsers = (UsersStats.findOne("connected") || {}).connected;
+    let connectionUsers = ((UsersStats.findOne("connected") || {}).userIds || []).length;
     return connectionUsers ? connectionUsers : 0;
   },
+  totalUsers: () => Meteor.users.find({}).count() || 0,
   createdUsers() {
     return (UsersStats.findOne("created") || {}).created || 0
   },
+  totalCurrencies: () => Template.instance().totalCurrencies.get(),
   signedUp: () => (UsersStats.findOne({
     _id: 'lastMonth'
   }) || {}).created || 0,
@@ -348,13 +375,9 @@ Template.returnedCurrencies.events({
       template.dateSlider.disable();
     }
   },
-  'click .currencyFilter': function (event) {
-    $('.currencyFilterModal').modal('show');
-  },
   'keyup #searchInput': function (event) {
     event.preventDefault();
     let query = $('#searchInput').val();
-
     //clear filter if no value in search bar
     if (query.length < 1) {
       Template.instance().searchInputFilter.set(undefined);
@@ -368,6 +391,9 @@ Template.returnedCurrencies.events({
 })
 
 Template.returnedCurrencies.onDestroyed(function () {
+  //only show the filter on the home page. This method breaks meteor design but its quick and works #yolo
+  $('.filterComponent').hide();
+
   // destroys scenes and controller
   this.controller.destroy()
 });

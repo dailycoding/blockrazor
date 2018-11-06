@@ -1,0 +1,53 @@
+/* Common
+-------------------------------------------------- */
+
+/* Sticky footer styles
+-------------------------------------------------- */
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  /* Margin bottom by footer height */
+  // margin-bottom: 60px;
+}
+
+// Footer Fix
+.app-body .main{
+  position: relative;
+  min-height: calc(100vh - 60px - 5em);
+}
+
+.border {
+  height: 4px;
+  width: 60px;
+  border-radius: 5px;
+  margin: 0px auto 30px auto;
+  border: none !important;
+  background-color: #4dbd74;
+}
+
+.reactive-table {
+  thead {
+    th {
+      color: #495057;
+      background-color: #e9ecef;
+      border-color: #dee2e6;
+    }
+  }
+}
+
+.breadcrumb {
+  border-top: 1px solid #c8ced3 !important;
+
+  li.breadcrumb-item {
+    a {
+      text-transform: capitalize;
+    }
+  }
+}
+
+.bg-dark {
+  color: #ffffff;
+}

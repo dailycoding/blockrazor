@@ -13,6 +13,12 @@ Template.redflagComment.helpers({
 
 
 Template.redflagComment.events({
+  'error .comment-author img': function(e) {
+    // fires when a particular image doesn't exist in given path
+    if ($(e.target).attr('src') !== '/codebase_images/noprofile.png') {
+      $(e.target).attr('src', '/codebase_images/noprofile.png')
+    }
+  },
   'click .flag': function() {
     $('#flagModal-' + this._id).modal('show');
   },
@@ -20,9 +26,9 @@ Template.redflagComment.events({
     $('#flagModal-' + this._id).modal('hide');
     Meteor.call('redflag', this._id, function(error, resonse) {
       if(!error){
-        sAlert.success("Thanks for letting us know!");
+        sAlert.success(TAPi18n.__('currency.feature.thanks'));
       } else {
-        sAlert.error(error.reason);
+        sAlert.error(TAPi18n.__(error.reason));
       }
     });
   }

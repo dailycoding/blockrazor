@@ -1,0 +1,22 @@
+<template name="moderatorDash">
+      <h2>Approvals</h2>
+
+  {{#unless reactiveVar 'reject'}}
+
+  {{#each pendingCurrencies}}
+       {{> moderatorPendingCurrency}}
+  {{/each}}
+  {{#each pendingWalletImages}}{{> approveWalletImage}}{{/each}}
+  {{#each pendingCommunityImages}}{{> approveCommunityImage}}{{/each}}
+
+  {{/unless}}
+  {{#if reactiveVar 'reject'}}
+  <form>
+    <h5>Please tell {{ reactiveVar 'submittername' }} what was wrong with their entry so that they can do better next time:</h5>
+    <textarea class="form-control" rows="6" placeholder="Please tell the user why this was rejected" name="reason"></textarea>
+    <button type="submit" class="btn btn-primary" id="submit">Send</button>
+  </form>
+  {{/if}}
+
+  {{>modal}}
+</template>

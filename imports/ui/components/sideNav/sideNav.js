@@ -1,24 +1,36 @@
-import { ActivityLog, Wallet, UserData } from '/imports/api/indexDB.js';
+import {FlowRouter} from 'meteor/ostrio:flow-router-extra';
 
 import './sideNav.html'
 import './sideNav.scss'
 import '../global/globalHelpers'
-import Hammer from 'hammerjs'
+
+import { colStub } from '/imports/ui/components/compatability/colStub'
+
+Wallet = ActivityLog = UserData = colStub
 
 Template.sideNav.helpers({
     activityNotifications() {
-        return ActivityLog.find({ owner: Meteor.userId(), type: "message", read: { $ne: true } }).count();
+        return ActivityLog.find({ owner: Meteor.userId(), type: "message", read: { $ne: true } }).count()
     },
     walletNotifications() {
-        return Wallet.find({ owner: Meteor.userId(), type: "transaction", read: { $ne: true } }).count();
+        return Wallet.find({ owner: Meteor.userId(), type: "transaction", read: { $ne: true } }).count()
     },
     balance() {
       let balance = UserData.findOne({}, { fields: { balance: 1 } }).balance
+      if (typeof(balance) === 'string') { return balance }
       return Number( balance.toPrecision(3) )
-    }
+    },
+    activeClass: function(route) {
+        if (FlowRouter.getRouteName() === route) {
+                return 'active';
+            }
+        }
 });
 
-Template.sideNav.onCreated(function() {
+Template.sideNav.onCreated(async function() {
+  ({ ActivityLog, UserData, Wallet } = (await import('/imports/api/indexDB')));
+  colStub.change()
+
   this.autorun(()=> {
     this.subscribe('wallet');
     this.subscribe('activitylog');
@@ -32,23 +44,3 @@ Template.sideNav.events({
     }
   },
 });
-
-
-Template.sideNav.onRendered(function () {
-
-let swipe = new Hammer(document);
-let sideMenuContainer = $('#sidebar');
-
-swipe.on('swiperight swipeleft', function(e) {
-  e.preventDefault()
-  if (e.type == 'swiperight') {
-
-$( "#navbar-toggler" ).click();
-  } else {
-
-$( "#navbar-toggler" ).click();
-  }
-
-});
-
-})

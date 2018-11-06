@@ -1,6 +1,6 @@
 import { Template } from 'meteor/templating'
 import { Currencies, Auctions, Bids, UserData } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
 
 import './currencyAuction.template.html'
 
@@ -21,6 +21,17 @@ Template.currencyAuction.onCreated(function() {
 	this.current = this.current.getTime() // count from the last full minute, as that's when the auction was last drained
 
 	Meteor.setInterval(() => this.now.set(Date.now()), 250) // update the timer every 250ms for smooth drainage
+})
+
+
+
+Template.currencyAuction.onRendered(function(){
+	const instance=Template.instance();
+     Meteor.setTimeout(()=>{
+		instance.$("#js-amount").on("input",function(){
+			this.value=this.value.slice(0,this.maxLength);
+		});
+	},10)
 })
 
 Template.currencyAuction.helpers({
@@ -127,9 +138,9 @@ Template.currencyAuction.helpers({
 			template: Template.instance(), //parent template instance
 			focus: false,
 			autoFocus: false,
-			quickEnter: true,
+			quickEnter: false,
 			displayField: "currencyName", //field that appears in typeahead select menu
-			placeholder: "Search cryptocurrencies"
+			placeholder: TAPi18n.__('auctions.currency.search')
 		}
 	}
 })
@@ -138,11 +149,11 @@ Template.currencyAuction.events({
 	'click .js-cancel': function(event, templateInstance) {
 		event.preventDefault()
 
-		Meteor.call('cancelBid', this._id, (err, data) => {
+		Meteor.call('cancelCurrencyBid', this._id, (err, data) => {
 			if (err) {
-				sAlert.error(err.reason)
+				sAlert.error(TAPi18n.__(err.reason))
 			} else {
-				sAlert.success('Bid cancelled.')
+				sAlert.success(TAPi18n.__('auctions.currency.cancelled'))
 			}
 		})
 	},
@@ -155,19 +166,31 @@ Template.currencyAuction.events({
 	    // this replacement line no longer necessary after updating the currncy symbol of Krazor in the database 
 	    // currencySymbol = currencySymbol === 'ZKR' ? 'KZR' : currencySymbol  // TODO: remove this replacement line after updating the database
 
-		if (parseFloat($('#js-amount').val()) > 0 && templateInstance.selectedId.get()) {
+		if (parseFloat($('#js-amount').val()) > 0 && templateInstance.selectedId.get() != "") {
 			Meteor.call('placeBid', 'top-currency', parseFloat($('#js-amount').val()), {
 				type: 'currency',
 				currency: templateInstance.selectedId.get()
 			}, (err, data) => {
 				if (err) {
-					sAlert.error(err.reason)
+					if (err.reason.toLowerCase().includes('currency')) {
+						$('#currencyError').text(TAPi18n.__(err.reason))
+						$('#currencyError').show()
+					} else {
+						$('#amountError').text(TAPi18n.__(err.reason))
+						$('#amountError').show()
+					}
 				} else {
-					sAlert.success('Bid successfully placed.')
+					['amount', 'currency'].forEach(i => $(`#${i}Error`).hide())
+
+					sAlert.success(TAPi18n.__('auctions.currency.bid_placed'))
 				}
 			})
 		} else {
-			sAlert.error('Some fields are missing.')
+			$('#amountError').toggle(isNaN(parseFloat($('#js-amount').val())) || parseFloat($('#js-amount').val()) <= 0) 
+			$('#currencyError').toggle(!templateInstance.selectedId.get())
+
+			$('#amountError').text(TAPi18n.__('auctions.currency.amount_invalid'))
+			$('#currencyError').text(TAPi18n.__('auctions.currency.currency_invalid'))
 		}
 	},
 })

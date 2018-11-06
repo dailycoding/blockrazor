@@ -41,19 +41,27 @@ import { ChangedCurrencies } from '/imports/api/coins/changedCurrencies.js'
 import { Redflags } from '/imports/api/redflags/redflags.js'
 
 import { ActivityLog } from '/imports/api/activityLog/activityLog.js'
+import { ActivityIPs } from '/imports/api/activityLog/activityIPs'
 
 import { Bids } from '/imports/api/auctions/bids'
 import { Auctions } from '/imports/api/auctions/auctions'
 
 import { Summaries } from '/imports/api/summaries/summaries'
 
+import { Payments } from '/imports/api/payments/payments'
+
 import { Problems } from '/imports/api/problems/problems'
 import { ProblemImages } from '/imports/api/problems/problemImages'
 import { ProblemComments } from '/imports/api/problems/problemComments'
 
 import { Exchanges } from '/imports/api/exchanges/exchanges'
+import { Encryption } from '/imports/api/encryption/encryption'
+import { Translations } from '/imports/api/translations/translations'
 
 import { developmentValidationEnabledFalse } from '/imports/startup/both/developmentValidationEnabledFalse'
+
+//We can delete launchEmail after launch of BlockRazor
+import { launchEmails } from '/imports/api/launchEmails/launchEmails.js'
 
 export {
   Exchanges,
@@ -63,7 +71,6 @@ export {
   REWARDCOEFFICIENT,
 
   Currencies,
-  LocalCurrencies,
   PendingCurrencies,
   RejectedCurrencies,
   ChangedCurrencies,
@@ -100,6 +107,7 @@ export {
   Redflags,
 
   ActivityLog,
+  ActivityIPs,
 
   Bids,
   Auctions,
@@ -110,5 +118,12 @@ export {
   ProblemImages,
   ProblemComments,
   
-  developmentValidationEnabledFalse
+  developmentValidationEnabledFalse,
+
+  launchEmails,
+
+  Payments,
+
+  Encryption,
+  Translations
 }

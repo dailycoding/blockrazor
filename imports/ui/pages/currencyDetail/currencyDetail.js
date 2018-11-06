@@ -1,5 +1,6 @@
 import { Template } from 'meteor/templating'
 import { HashAlgorithm, FormData, Currencies, Bounties } from '/imports/api/indexDB.js'
+import {FlowRouter} from 'meteor/ostrio:flow-router-extra';
 import Cookies from 'js-cookie'
 
 import './currencyDetail.html'
@@ -12,7 +13,6 @@ import './discussion.js'
 import './fundamentalMetrics.js'
 import './walletimages.js'
 import './currency.scss'
-import './currency-info.scss'
 import './currencyDetail.scss'
 import './summary'
 import './summaries'
@@ -47,14 +47,14 @@ Template.currencyDetail.events({
     if ($('#js-pr').val()) {
       Meteor.call('completeHashPowerBounty', FlowRouter.getParam('slug'), $('#js-pr').val(), (err, data) => {
         if (!data) {
-          sAlert.error('Invalid PR URL.')
+          sAlert.error(TAPi18n.__('currency.detail.invalid_pr'))
         } else {
-          sAlert.success('Successfully completed.')
+          sAlert.success(TAPi18n.__('currency.detail.success'))
           Cookies.set('workingBounty', false, { expires: 1 })
         }
       })
     } else {
-      sAlert.error('Please enter the PR URL.')
+      sAlert.error(TAPi18n.__('currency.detail.enter_pr'))
     }
   },
   'click #js-extend': (event, templateInstance) => {
@@ -89,7 +89,10 @@ Template.currencyDetail.helpers({
       }
     }).fetch()[0]
 
-    return `You have ${Math.round((bounty.expiresAt - Template.instance().now.get())/1000/60)} minutes to complete the bounty for ${Number(bounty.currentReward).toFixed(2)} KZR.`;
+    return TAPi18n.__('currency.detail.time_remaining', {
+      postProcess: 'sprintf',
+      sprintf: [Math.round((bounty.expiresAt - Template.instance().now.get())/1000/60), Number(bounty.currentReward).toFixed(2)]
+    })
   },
   canExtend: () => {
     let bounty = Bounties.find({
@@ -105,10 +108,16 @@ Template.currencyDetail.helpers({
     return Math.round((bounty.expiresAt - Template.instance().now.get())/1000/60) < 10 // les than 10 minutes remaining
   },
   thiscurrency () {
-    return Currencies.findOne({slug: FlowRouter.getParam("slug")});
+    return Currencies.findOne({
+      slug: FlowRouter.getParam('slug')
+    })
   },
   currencyName () {
     return Currencies.findOne({slug: FlowRouter.getParam("slug")}).currencyName;
+  },
+  getCurrencySymbol (currency) {
+	  if (currency && currency.currencySymbol !== undefined) { return currency.currencySymbol }
+	  return "";
   },
 
 
@@ -116,7 +125,7 @@ Template.currencyDetail.helpers({
       if (this.maxCoins && this.marketCap) {
       return Math.round(this.marketCap / this.maxCoins).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     } else {
-      return "calculating..."
+      return TAPi18n.__('currency.detail.calculating')
     }
     },
     marketCap () {
@@ -127,7 +136,7 @@ Template.currencyDetail.helpers({
     },
     launchDate () {
       if (this.genesisTimestamp) {
-      return "Launched " + moment(this.genesisTimestamp).fromNow();
+      return TAPi18n.__('currency.detail.launched') + moment(this.genesisTimestamp).fromNow();
     } else {
       return "";
     }
@@ -143,7 +152,7 @@ Template.currencyDetail.helpers({
       if (this.genesisTimestamp) {
         return "";
       } else {
-        return "Add the " + this.currencyName + " launch date!"
+        return TAPi18n.__('currency.detail.add') + this.currencyName + TAPi18n.__('currency.detail.launch_date')
       }
     }
 

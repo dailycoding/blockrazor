@@ -5,10 +5,12 @@
 }
 
 .wallet-table-wrapper{
-  .reactive-table-navigation {
+  width: 100%;
+	.reactive-table-navigation {
     position: relative;
     display: flex;
     justify-content: flex-end;
+    padding-top: 1em;
     > div{
       clear: both;
     }
@@ -26,6 +28,9 @@
       margin: 0 5px;
     }
   }
+  span.page-number-count {
+    padding-left: 0.5em;
+  }
 }
 
 .currency-card {
@@ -36,7 +41,7 @@
     box-shadow: 0 2px 4px 0 rgba(0,0,0,0.1);
     transition: 0.3s;
     border-radius: 5px;
-    padding: 2px 16px;
+    padding: 0;
     text-align: center;
     background: white;
     cursor: pointer;
@@ -44,55 +49,27 @@
     .card-main {
       .card-logo {
         height: 100px;
-        width: 30%;
-        margin-right: auto;
-        margin-left: auto;
-        margin-bottom: 25px;
+        width: auto;
+        margin: 18px auto;
       }
-  
+
       h4 b {
         color: #999999;
-        text-shadow: 2px 2px 4px #cccccc;      
+        text-shadow: 2px 2px 4px #cccccc;
       }
-  
+
       .balance {
         margin: 20px 0 20px 0;
-        background: #f1f1f1;
-      }    
+        background: #29ab87;
+        color: #fff;
+      }
+
+      i {
+        font-size:7.5em; 
+        padding:15px;
+      }
     }
 
-  }
-
-  .card-kzr {
-    .card-logo {
-      background: url('/images/KZR_logo.jpg') center center;
-      background-size: contain;
-      background-repeat: no-repeat;
-    }
-  }
-
-  .card-usd {
-    .card-logo {
-      background: url('/images/USD_logo.jpg') center center;
-      background-size: contain;
-      background-repeat: no-repeat;
-    }
-  }
-
-  .card-eth {
-    .card-logo {
-      background: url('/images/ETH_logo.jpg') center center;
-      background-size: contain;
-      background-repeat: no-repeat;
-    }
-  }
-
-  .card-xmr {
-    .card-logo {
-      background: url('/images/XMR_logo.jpg') center center;
-      background-size: contain;
-      background-repeat: no-repeat;
-    }
   }
 
   .card-content:hover {
@@ -106,7 +83,13 @@
 }
 
 .wallet-outer {
-  padding: 15px 15px 0 15px;  
+  padding: 15px 15px 0 15px;
+
+  #js-cur{
+    border: none;
+    background: #f4f4f4;
+    padding: 10px;
+  }
 
   a:hover {
     text-decoration: none;
@@ -117,4 +100,18 @@
   margin: 0 15px 0 15px;
   padding: 15px;
   background: white;
+}
+
+// Filter Transactions
+.filter-options{
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  margin: 1em 0;
+  h5{
+    width: 100%;
+  }
+  .custom-control{
+    padding-right: 1rem;
+  }
 }

@@ -1,7 +1,7 @@
 import { Template } from 'meteor/templating';
 import { Currencies, Ratings, Bounties } from '/imports/api/indexDB.js';
 import Cookies from 'js-cookie'
-import swal from 'sweetalert';
+import('sweetalert2').then(swal => window.swal = swal.default)
 
 import './commQuestions.html'
 import './communities.scss'
@@ -58,7 +58,9 @@ Template.commQuestions.helpers({
 Template.commQuestions.events({
     'error img': function(e) {
         // fires when a particular image doesn't exist in given path
-        $(e.target).attr('src','/images/noimage.png'); 
+        if ($(e.target).attr('src') !== '/codebase_images/noimage.png') {
+            $(e.target).attr('src', '/codebase_images/noimage.png')
+        }
     },
     'mouseover .choice': (event, templateInstance) => {
         $('.choice').css('cursor', 'pointer')
@@ -97,7 +99,7 @@ Template.commQuestions.events({
                 if (templateInstance.cnt++ === 0) {
 					swal({
 						icon: "warning",
-						text: 'Your answer is in contradiction with your previous answers. Please try again. If this persists, your progress will be purged and bounties will be nullified.',
+						text: TAPi18n.__('codebase.contradicts'),
 						button: { className: 'btn btn-primary' }
 					});
                 } else {

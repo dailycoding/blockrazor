@@ -9,13 +9,22 @@ import './redflagComment.js'
 Template.redflags.onCreated(function(){
   this.showredflagged = new ReactiveVar(false)
   this.addingnewredflag = new ReactiveVar(false)
+  this.loadMore = new ReactiveVar(true)
   this.lastId = new ReactiveVar('')
+  this.redflagIncrement = 3
+  this.redflagLimit = new ReactiveVar(this.redflagIncrement)
+  this.redflagShow = new ReactiveVar(null)
 
   this.autorun(() => {
     this.currencyId = (Currencies.findOne({ slug: FlowRouter.getParam("slug") }) || {})._id
 
     if (this.currencyId) {
       SubsCache.subscribe('redflags', this.currencyId)
+
+      var query = {currencyId: this.currencyId, flagRatio: {$lt: 0.6}}
+      this.redflagShow.set(Redflags.find(query, {limit: this.redflagLimit.get(), sort: {rating: -1, appealNumber: -1,createdAt:-1}}));
+      //prefetch
+      Redflags.find(query, {limit: this.redflagLimit.get()+this.redflagIncrement, sort: {rating: -1,createdAt:-1, appealNumber: -1}}).fetch()
     }
   })
 });
@@ -31,51 +40,64 @@ Template.redflags.helpers({
     return this.featureTag; //find metricTag data from collection
   },
   redflags: function() {
-    return Redflags.find({currencyId: Template.instance().currencyId, flagRatio: {$lt: 0.6}}, {sort: {rating: -1, appealNumber: -1,createdAt:-1}});
+    return Template.instance().redflagShow.get().fetch()
+    // return Redflags.find({currencyId: Template.instance().currencyId, flagRatio: {$lt: 0.6}}, {sort: {rating: -1, appealNumber: -1,createdAt:-1},limit: 3}).fetch();
   },
   redflagsFlagged: function() {
-    return Redflags.find({currencyId: Template.instance().currencyId, flagRatio: {$gt: 0.6}});
+    return Redflags.find({currencyId: Template.instance().currencyId, flagRatio: {$gt: 0.6}},{limit: 3});
+  },
+    loadMoreActive: function() {
+    return Template.instance().loadMore.get()
   }
 });
 
 Template.redflags.events({
-  'click .help': function() {
-    $('#addFeatureModal').modal('show');
+  'click #loadMoreRedflags': function(ev, templ){
+    templ.redflagLimit.set(templ.redflagLimit.get()+templ.redflagIncrement)
+
+    let currentCount = templ.redflagShow.get().count()
+
+    if(templ.redflagLimit.get() > currentCount){
+    templ.loadMore.set(false);
+    }
+  },
+  'click .flag-help-button .help': function() {
+    $('#addRedFlagModal').modal('show');
   },
   'mouseover .help': function() {
     $('.help').css('cursor', 'pointer');
   },
-  'focus #featureName': function() {
-    if(Cookies.get('addFeatureModal') != "true") {
-      $('#addFeatureModal').modal('show');
-      Cookies.set('addFeatureModal', true);
+  'focus #redflagContent': function() {
+    if(Cookies.get('addRedFlagModal') != "true") {
+      $('#addRedFlagModal').modal('show');
+      Cookies.set('addRedFlagModal', true);
     }
   },
-  'mouseover .currencyDetailBox': function() {
-    if(_.size(Redflags.find({}).fetch()) == 0 && !Cookies.get('featureModal')) {
-      $('#featureModal').modal('show');
-      Cookies.set('featureModal', true);
+  'mouseover .currency-redflags .currencyDetailBox': function() {
+    if(_.size(Redflags.find({}).fetch()) == 0 && !Cookies.get('addRedFlagModal')) {
+      $('#addRedFlagModal').modal('show');
+      Cookies.set('addRedFlagModal', true);
     }
   },
-  'keyup #featureName': function() {
-    $('#featureName').keyup(function () {
+  'keyup #redflagContent': function() {
+    $('#redflagContent').keyup(function () {
   var max = 140;
   var len = $(this).val().length;
   if (len >= max) {
-    $('#charNum').text(' you have reached the limit');
+    $('#charNumFlag').text(TAPi18n.__('currency.redflags.limit'));
   } else {
     var char = max - len;
-    $('#charNum').text(char + ' characters left');
+    $('#charNumFlag').text(char + TAPi18n.__('currency.redflags.left'));
   }
 });
   },
   'click .submitRedFlag': function () {
     if(!Meteor.user()) {
-      sAlert.error("You must be logged in to red flag a currency");
+      sAlert.error(TAPi18n.__('currency.redflags.must_login'));
     }
     var data = $('#redflagContent').val();
     if(data.length < 6 || data.length > 140) {
-      sAlert.error("That entry is too short, or too long.");
+      sAlert.error(TAPi18n.__('currency.redflags.too_short'));
     } else {
       let res 
       try {
@@ -87,25 +109,24 @@ Template.redflags.events({
       Meteor.call('newRedFlagMethod', this._id, data, res, (err, data) => {
         if (!err) {
           $('#redflagContent').val(" ");
-          $('#showAddNewRedflag').toggle();
-          $('.redflagheading').text("Red Flag Currency");
+          $(".showAddNewRedflag").show();
+          $(".addNewRedflagContainer").hide();
           templ.addingnewredflag.set(false);
-          sAlert.success("Thanks! Red flag added")
+          sAlert.success(TAPi18n.__('currency.redflags.added'))
         } else {
-          sAlert.error(err.reason)
+          sAlert.error(TAPi18n.__(err.reason))
         }
       })
     }
   },
   'click .showAddNewRedflag': function() {
-    $('#showAddNewRedflag').toggle();
-    if(!Template.instance().addingnewredflag.get()) {
-      $('.redflagheading rating').text("Red Flag Currency");
-      Template.instance().addingnewredflag.set(true);
-    } else {
-      $('.redflagheading rating').text("Red Flag");
-      Template.instance().addingnewredflag.set(false);
-    }
+    $(".showAddNewRedflag").hide();
+    $(".addNewRedflagContainer").show();
+    $("#redflagContent").focus();
+  },
+  'click .cancelNewRedFlag': function() {
+    $(".showAddNewRedflag").show();
+    $(".addNewRedflagContainer").hide();
   },
   'click #name': function () {
     if(Template.instance().lastId.get()){document.getElementById(Template.instance().lastId.get()).style.display = "none";}

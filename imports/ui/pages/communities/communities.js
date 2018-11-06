@@ -1,6 +1,7 @@
 import { Template } from 'meteor/templating';
 import { Currencies, Ratings, Bounties } from '/imports/api/indexDB.js';
 import Cookies from 'js-cookie'
+import('sweetalert2').then(swal => window.swal = swal.default)
 
 import './communities.html'
 import './commCurrencyChoices'
@@ -61,15 +62,15 @@ Template.communities.events({
             if (err) {
 				swal({
                     icon: "error",
-                    text: err.reason,
-                    button: { className: 'btn btn-primary' }
+                    text: TAPi18n.__(err.reason),
+                    confirmButtonClass: 'btn btn-primary'
                 });
             } else {
 				swal({
 					icon: "warning",
-					title: "We detect lazy answering!",
+					title: TAPi18n.__('codebase.detect'),
 					text: _lazyAnsweringWarningText,
-					button: { text: 'continue', className: 'btn btn-primary' }
+					confirmButtonClass: 'btn btn-primary'
 				}).then((value) => {
 					if (!Ratings.findOne({
 	                    $or: [{
@@ -82,8 +83,8 @@ Template.communities.events({
 	                })) {
 						swal({
 		                    icon: "error",
-		                    text: 'Please add some communities to continue.',
-		                    button: { className: 'btn btn-primary' }
+		                    text: TAPi18n.__('communities.add_to_continue'),
+		                    confirmButtonClass: 'btn btn-primary'
 		                });
 	                }
 				});
@@ -134,7 +135,10 @@ Template.communities.helpers({
             }
         }).fetch()[0]
 
-        return `You have ${Math.round((bounty.expiresAt - Template.instance().now.get())/1000/60)} minutes to complete the bounty for ${Number(bounty.currentReward).toFixed(2)} KZR.`;
+        return TAPi18n.__('codebase.time_left', {
+            postProcess: 'sprintf',
+            sprintf: [Math.round((bounty.expiresAt - Template.instance().now.get())/1000/60), Number(bounty.currentReward).toFixed(2)]
+        })
     },
     questions: () => {
         return Ratings.findOne({

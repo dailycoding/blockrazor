@@ -1,6 +1,7 @@
 import { Template } from 'meteor/templating';
-import { Bounties, REWARDCOEFFICIENT, Problems, Currencies, UserData } from '/imports/api/indexDB.js';
+import { Bounties, REWARDCOEFFICIENT, Problems, Currencies, PendingCurrencies, UserData, Ratings, HashPower } from '/imports/api/indexDB.js';
 import Cookies from 'js-cookie';
+import('sweetalert2').then(swal => window.swal = swal.default)
 
 export const LocalBounties = new Mongo.Collection(null)
 
@@ -61,13 +62,16 @@ Template.bounties.onCreated(function(){
     SubsCache.subscribe('bountyProblems', 0, 0)
     SubsCache.subscribe('bountyCurrencies', 0, 0)
     SubsCache.subscribe('users')
+    SubsCache.subscribe('bountyRating')
+    SubsCache.subscribe('bountyLastCurrency')
+    SubsCache.subscribe('bountyLastHash')
   })
 
   Session.set('bountyType', "")
   Session.set("now", Date.now())
   Session.set("workingBounty", false)
 
-  this.times = new ReactiveVar({})
+  this.times = new ReactiveDict()
   this.bounties = new ReactiveVar(null)
 
   this.LocalBounties = LocalBounties
@@ -75,35 +79,54 @@ Template.bounties.onCreated(function(){
 
   this.filter = new ReactiveVar({})
 
-  Meteor.call('getLastCurrency', (err, data) => {
-    let times = this.times.get()
-    times['new-currency'] = data.createdAt
-    this.times.set(times)
+  Tracker.autorun(() => {
+    this.times.set('new-currency', (PendingCurrencies.findOne({}, { sort: { createdAt: -1 }}) || {}).createdAt || (Currencies.findOne({}, { sort: { createdAt: -1 }}) || {}).createdAt || Date.now())
   })
 
-  //may return a document field without createdAt field
-  Meteor.call('getLastHashPower', (err, data) => {
-    let times = this.times.get()
-    times['new-hashpower'] = data.createdAt || Date.now()
-    this.times.set(times)
+  Tracker.autorun(() => {
+    this.times.set('new-hashpower', (HashPower.findOne({}, { sort: { createdAt: -1 }}) || {}).createdAt || Date.now())
   })
 
-  Meteor.call('getLastCommunityAnswer', (err, data) => {
-    let times = this.times.get()
-    times['new-community'] = data.answeredAt || Date.now()
-    this.times.set(times)
+  Tracker.autorun(() => {
+    this.times.set('new-codebase', (Ratings.findOne({
+        $or: [{
+            catagory: 'codebase'
+        }, {
+            context: 'codebase'
+        }]
+    }, {
+        sort: {
+            answeredAt: -1
+        }
+    }) || {}).answeredAt || Date.now())
   })
 
-  Meteor.call('getLastWalletAnswer', (err, data) => {
-    let times = this.times.get()
-    times['new-wallet'] = data.answeredAt || Date.now()
-    this.times.set(times)
+  Tracker.autorun(() => {
+    this.times.set('new-community', (Ratings.findOne({
+        $or: [{
+            catagory: 'community'
+        }, {
+            context: 'community'
+        }]
+    }, {
+        sort: {
+            answeredAt: -1
+        }
+    }) || {}).answeredAt || Date.now())
   })
 
-  Meteor.call('getLastCodebaseAnswer', (err, data) => {
-    let times = this.times.get()
-    times['new-codebase'] = data.answeredAt || Date.now()
-    this.times.set(times)
+  Tracker.autorun(() => {
+    this.times.set('new-wallet', (Ratings.findOne({
+        $or: [{
+            catagory: 'wallet'
+        }, {
+            context: 'wallet'
+        }]
+    }, {
+        sort: {
+            answeredAt: -1
+        }
+    }) || {}).answeredAt || Date.now())
   })
 
    //  references to LocalBounty have to be nonreactive since rewards are appended to documents separately causing a loop with reactivity on
@@ -119,7 +142,7 @@ Template.bounties.onCreated(function(){
     }).fetch().map(i => ({
       _id: i._id,
       problem: i.header,
-      solution: 'Check the problem page.',
+      solution: TAPi18n.__('bounties.solution'),
       types: {
         heading: i.header
       },
@@ -129,14 +152,15 @@ Template.bounties.onCreated(function(){
       pendingApproval : false,
       url : `/problem/${i._id}`,
       isProblem: true,
-      workingText: i.locked ? 'Someone is working on it.' : '',
+      workingText: i.locked ? TAPi18n.__('bounties.someone_working') : '',
       reward: i.reward
     }))
 
     let currencies = Currencies.find({
       hashpowerApi: {
         $ne: true
-      }
+      },
+      consensusSecurity: 'Proof of Work'
     }).fetch().map(i => {
       let b = Bounties.findOne({
         type: `currency-${i.slug}`
@@ -147,11 +171,11 @@ Template.bounties.onCreated(function(){
       })
       return {
         _id: `currency-${i.slug}`,
-        problem: 'Hash power API call is not available or it\'s broken',
-        solution: 'Add a hash power API call to help us determine the hash power',
+        problem: TAPi18n.__('bounties.hash_problem'),
+        solution: TAPi18n.__('bounties.hash_solution'),
         types: {
-          heading: 'Add a hash power API call',
-          rules : 'If you accept this bounty, you\'ll have 2 hours to complete it and send a pull request with hash power API call for the given reward. 10 minutes before expiration, you\'ll get a chance to extend the time limit.'
+          heading: TAPi18n.__('bounties.hash_heading'),
+          rules : TAPi18n.__('bounties.hash_rules')
         },
         currencyName: i.currencyName,
         pendingApproval : false,
@@ -173,7 +197,7 @@ Template.bounties.onCreated(function(){
     var union = _.union(Bounties.find({ // inject problems here
       pendingApproval: false
     }).fetch().map(i => {
-      i.creationTime = i.creationTime || Template.instance().times.get()[i._id]
+      i.creationTime = i.creationTime || Template.instance().times.get(i._id)
       return i
     }), problems, currencies)
 
@@ -239,18 +263,17 @@ Template.bounties.events({
       event.preventDefault()
       
       swal({
-          title: "Share with friends and earn 5% of KZR they earn every day.",
-          button: { className: 'btn btn-primary' },
-          content: {
-              element: "input",
-              attributes: {
-                  id: 'shareURL',
-                  value: "https://blockrazor.org/#H8hpyxk5uoiuiZSbmdfX",
-                  type: "text",
-              },
+          title: TAPi18n.__('bounties.share_5'),
+          input: 'text',
+          confirmButtonText: 'Ok',
+          confirmButtonColor : "#000",
+          inputValue: "https://blockrazor.org/#H8hpyxk5uoiuiZSbmdfX",
+          inputAttributes: {
+              id: 'shareURL'
           }
-      })
 
+      })
+      $('#shareURL').focus()
       $('#shareURL').select()
 
   },

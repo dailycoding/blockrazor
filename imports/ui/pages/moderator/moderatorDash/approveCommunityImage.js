@@ -1,6 +1,6 @@
 import { Template } from 'meteor/templating';
 import './approveCommunityImage.html'
-import swal from 'sweetalert'
+import('sweetalert2').then(swal => window.swal = swal.default)
 
 Template.approveCommunityImage.helpers({
         getThumbnailImage: function(img) {
@@ -21,37 +21,38 @@ Template.approveCommunityImage.events({
       },
   'click #reject': function(event) {
 
-      swal("Why are you rejecting this?", {
+      swal({
+        text: TAPi18n.__('moderator.dash.why'),
         type: "warning",
-              content: "input",
-              button: { className: 'btn btn-primary' },
-              showCancelButton: true,
-              attributes: {
-                  type: "text",
-                  required: true,
-              }
-          })
-          .then((rejectionReason) => {
+        input: "text",
+        confirmButtonClass: 'btn btn-primary',
+        cancelButtonClass: 'btn',
+        showCancelButton: true
+      }).then((rejectionReason) => {
 
               if (rejectionReason) {
                   Meteor.call('flagCommunityImage', this._id, rejectionReason, (err, data) => {
                       if (!err) {
-                          sAlert.success('Rejected.')
+                          sAlert.success(TAPi18n.__('moderator.dash.rejected'))
+                          Session.set('lastApproval', 'approveCommunityImage');
                       } else {
-                          sAlert.error(err.reason)
+                          sAlert.error(TAPi18n.__(err.reason))
+                          Session.set('lastApproval', 'approveCommunityImage');
                       }
                   })
               }else{
-                sAlert.error('No rejection reason supplied, image not rejected')
+                sAlert.error(TAPi18n.__('moderator.dash.no_reason'))
               }
           });
   },
   'click #approve': function(event) {
     Meteor.call('approveCommunityImage', this._id, (err, data) => {
       if (!err) {
-        sAlert.success('Approved.')
+        sAlert.success(TAPi18n.__('moderator.dash.approved'))
+        Session.set('lastApproval', 'approveCommunityImage');
       } else {
-        sAlert.error(err.reason)
+        sAlert.error(TAPi18n.__(err.reason))
+        Session.set('lastApproval', 'approveCommunityImage');
       }
     })
   }

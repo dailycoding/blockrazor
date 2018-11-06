@@ -69,7 +69,7 @@ Template.codCurrencyChoices.events({
     'click #populateRatings': (event, templateInstance) => {
         Meteor.call('populateCodebaseRatings', (err, result) => {
             if (err) {
-                sAlert.error(err.reason)
+                sAlert.error(TAPi18n.__(err.reason))
             } else {
                 if (!Ratings.findOne({
                     $or: [{
@@ -80,7 +80,7 @@ Template.codCurrencyChoices.events({
                         context: 'codebase'
                     }]
                 })) {
-                    sAlert.error('Please add some codebases to continue.')
+                    sAlert.error(TAPi18n.__('codebase.add_codebases'))
                 }
             }
         })
@@ -90,11 +90,11 @@ Template.codCurrencyChoices.events({
             if (!err) {
                 $(`#js-cod-url_${this._id}`).attr('disabled', 'true')
                 $(event.currentTarget).attr('disabled', 'true')
-                $(event.currentTarget).text('Saved.')
+                $(event.currentTarget).text(TAPi18n.__('codebase.saved'))
 
                 setTimeout(() => $(`#links_${this._id}`).hide(), 1000)
             } else {
-                sAlert.error(err.reason)
+                sAlert.error(TAPi18n.__(err.reason))
             }
         })
     }

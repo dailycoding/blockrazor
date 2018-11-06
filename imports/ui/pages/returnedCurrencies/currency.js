@@ -4,6 +4,12 @@ import { GraphData } from '/imports/api/indexDB.js';
 
 import "/imports/ui/components/radarGraph.js"
 import "./currency.html"
+import "../currencyDetail/currency.scss"
+
+Template.currency.onRendered(function () {
+ //init tooltips, bootstrap doesn't init it automatically with meteor :(
+  $('[data-toggle="tooltip"]').tooltip()
+});
 
 Template.currency.events({
   'click .currency-card': function(event) {
@@ -18,8 +24,11 @@ Template.currency.events({
 Template.currency.helpers({
   graphOptions(){
     return {
-      responsive: false,
-      defaultFontColor: 'red',
+    animation: {
+      duration: 0
+    },
+    responsive: false,
+    defaultFontColor: 'red',
     tooltips: {enabled: false},
     maintainAspectRatio: false,
     title: {display: false},

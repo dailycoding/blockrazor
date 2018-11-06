@@ -1,6 +1,13 @@
 import { Template } from 'meteor/templating';
-import { Bounties } from '/imports/api/indexDB.js';
+import { colStub } from '/imports/ui/components/compatability/colStub'
 
+Bounties = colStub
+
+import('/imports/api/bounties/bounties').then(b => {
+	Bounties = b.Bounties
+
+	colStub.change()
+})
 
 //global helpers are in /client/main.js, but truly belong in /imports/startup
 var getBountyUrl = (bountyType) => {
@@ -39,7 +46,7 @@ Template.registerHelper('bountyUrl', (bountyArr) => {
 	// call getBountyUrl on it
 	if (bountyArr.length !== 0) { return getBountyUrl(bountyArr[0].type); }
 	// otherwise return an empty string
-	return '';
+	return '/bounties';
 });
 
 Template.registerHelper('hasBounties', (bountyArr) => {

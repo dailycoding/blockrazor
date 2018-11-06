@@ -1,0 +1,87 @@
+/* Layouts - Layout
+-------------------------------------------------- */
+
+.layout {
+  .app-body {
+    margin-top: 0 !important;
+  }
+
+  .sidebar,
+  .main {
+    margin-top: 55px;
+  }
+
+  // Space for footer
+  main.main{
+    margin-bottom: 5em;
+  }
+
+  .app-header {
+    .nav-item {
+      min-width: 35px !important;
+    }
+  }
+
+  .navbar-dark .navbar-nav .nav-link {
+    color: #fff;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+header.masthead {
+  position: relative;
+  background-color: #343a40;
+  background: url("/codebase_images/bg-masthead.jpg") no-repeat center center;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+  padding-top: 8rem;
+  padding-bottom: 8rem;
+}
+
+header.masthead .overlay {
+  position: absolute;
+  background-color: #212529;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0.3;
+}
+
+header.masthead h1 {
+  font-size: 2rem;
+}
+
+.text-underline-none {
+  text-decoration: none !important;
+}
+
+@media (min-width: 768px) {
+  header.masthead {
+    padding-top: 6rem;
+    padding-bottom: 12rem;
+  }
+  header.masthead h1 {
+    font-size: 3rem;
+  }
+}
+
+.showcase .showcase-text {
+  padding: 3rem;
+}
+
+.showcase .showcase-img {
+  min-height: 30rem;
+  background-size: cover;
+}
+
+@media (min-width: 768px) {
+  .showcase .showcase-text {
+    padding: 7rem;
+  }
+}

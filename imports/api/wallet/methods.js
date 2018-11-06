@@ -10,7 +10,8 @@ Meteor.methods({
 			Wallet.insert({
 				time: new Date().getTime(),
 				owner: this.userId,
-				type: "transaction",
+        type: "welcome",
+        read: false,
 				from: "System",
 				message: "Welcome to Blockrazor! Your wallet has been created. Why not head over to the Bounty list and earn your first Rozar!",
 				amount: 0
@@ -101,7 +102,7 @@ Meteor.methods({
 
 	flagWalletImage: function(imageId,rejectReason) {
 		if (!this.userId) {
-			throw new Meteor.Error('error', 'please log in')
+			throw new Meteor.Error('error', 'messages.login')
 		}
 
 		let wallet = WalletImages.findOne({
@@ -133,7 +134,7 @@ Meteor.methods({
 
             let reward = ratings.reduce((i1, i2) => i1 + (i2.reward || 0), 0)
 
-            removeUserCredit(reward, Meteor.userId(), 'posting an invalid wallet screenshot','cheating') // remove all credit user has gained from this
+            removeUserCredit(reward, wallet.createdBy, 'posting an invalid wallet screenshot','cheating') // remove all credit user has gained from this
 
             Ratings.remove({
                 _id: {
@@ -141,7 +142,7 @@ Meteor.methods({
                 }
             }) // remove only unprocessed ratings associated with this wallet image, as processed ones are already part of the ELO calculation and can't be removed
 
-            Meteor.call('userStrike', Meteor.userId(), 'bad-wallet', 's3rv3r-only', (err, data) => {}) // user earns 1 strike here
+            Meteor.call('userStrike', wallet.createdBy, 'bad-wallet', 's3rv3r-only', (err, data) => {}) // user earns 1 strike here
 
             WalletImages.remove({
                 _id: imageId
@@ -151,13 +152,13 @@ Meteor.methods({
 
 	approveWalletImage: function(imageId) {
 		if (!this.userId) {
-			throw new Meteor.Error('error', 'please log in')
+			throw new Meteor.Error('error', 'messages.login')
 		}
 
 		if (WalletImages.findOne({
 			_id: imageId
 		}).createdBy === this.userId) {
-			throw new Meteor.Error('Error', 'You can\'t approve your own item.')
+			throw new Meteor.Error('Error', 'messages.wallet.approve_own')
 		}
 
 		WalletImages.update({
@@ -216,30 +217,29 @@ Meteor.methods({
 
         Meteor.call('userStrike', Meteor.userId(), 'cheating', 's3rv3r-only', (err, data) => {}) // user earns 1 strike here
     },
-
-	getLastWalletAnswer: () => {
-        return Ratings.find({
-            $or: [{
-                catagory: 'wallet'
-            }, {
-                context: 'wallet'
-            }]
-        }, {
-            sort: {
-                answeredAt: -1
-            }
-        }).fetch()[0]
+    hideWelcomeMsg : function(userId){
+      if (!Meteor.userId()) { throw new Meteor.Error('error', 'messages.login') }
+      Wallet.update(
+        { owner: userId, type: "welcome"},
+        { $set: { read: true } },
+        function(error){
+          log.error('Error in mark welcome Notification as read', error)
+					throw new Meteor.Error(500, error.message);
+        })
     },
-
     markAsRead: function(currency) {
-		if (!Meteor.userId()) { throw new Meteor.Error('error', 'please log in') };
+		if (!Meteor.userId()) { throw new Meteor.Error('error', 'messages.login') };
 
 		var filterOptions = {};
 
 		if (currency === 'kzr') {
 			filterOptions = {
 				owner: Meteor.userId,
-				currency: { $exists: false }
+				$or: [{
+          currency: { $exists: false }
+        },{
+          currency: currency.toUpperCase()
+        }]
 			}
 		} else {
 			filterOptions = {
@@ -258,11 +258,19 @@ Meteor.methods({
 		);
 	},
 
-	transactionCount: () => {
-		return Wallet.find({
-			type: 'transaction',
-			amount: { $nin: [0, NaN] } // filter out invalid transactions}
-		}).count()
+	transactionCount: (rewardType) => {
+		if(rewardType){
+			return Wallet.find({
+				rewardType: rewardType,
+				type: 'transaction',
+				amount: { $nin: [0, NaN] } // filter out invalid transactions}
+			}).count()
+		}else{
+			return Wallet.find({
+				type: 'transaction',
+				amount: { $nin: [0, NaN] } // filter out invalid transactions}
+			}).count()
+		}
 	},
 
 	totalAmount: () => {
@@ -324,19 +332,19 @@ Meteor.methods({
 		var md5validate = CryptoJS.MD5(CryptoJS.enc.Latin1.parse(binaryData)).toString();
 
 		if(md5validate != md5) {
-			throw new Meteor.Error('connection error', 'failed to validate md5 hash');
+			throw new Meteor.Error('connection error', 'messages.wallet.invalid_md5');
 			return false;
 		}
 
 		if (!this.userId) {
 			console.log("NOT LOGGED IN");
-			throw new Meteor.Error('error', 'You must be logged in to do this.');
+			throw new Meteor.Error('error', 'messages.login');
 			return false;
 		}
 
 		var fs = Npm.require('fs');
 		//get mimetpe of uploaded file
-		var mime = Npm.require('mime-types');
+		var mime = require('/imports/api/miscellaneous/mime').default
 		var mimetype = mime.lookup(fileName);
 		var validFile = _supportedFileTypes.includes(mimetype);
 		var fileExtension = mime.extension(mimetype);
@@ -346,7 +354,7 @@ Meteor.methods({
 		var insert = false;
 
 		if (!validFile) {
-			throw new Meteor.Error('Error', 'File type not supported, png, gif and jpeg supported');
+			throw new Meteor.Error('Error', 'messages.wallet.invalid_file');
 			return false;
 		}
 
@@ -372,7 +380,7 @@ Meteor.methods({
 				'allImagesUploaded': false
 			});
 		} catch(error) {
-			throw new Meteor.Error('Error', 'That image has already been used on Blockrazor. You must take your own original screenshot of the wallet.');
+			throw new Meteor.Error('Error', 'messages.wallet.image_exists');
 		}
 		//check if three files have been uploaded
 		let walletCheckCount = WalletImages.find({currencyId:currencyId,createdBy:this.userId}).count();
@@ -380,7 +388,7 @@ Meteor.methods({
 			WalletImages.update({currencyId:currencyId,createdBy:this.userId},{$set: {allImagesUploaded: true}},{multi: true});
 		}
 
-		if(insert != md5) {throw new Meteor.Error('Error', 'Something is wrong, please contact help.');}
+		if(insert != md5) {throw new Meteor.Error('Error', 'messages.wallet.something_wrong');}
 
 		fs.writeFileSync(filename, binaryData, {encoding: 'binary'}, Meteor.bindEnvironment(function(error){
 			if(error){
@@ -424,7 +432,7 @@ Meteor.methods({
 
 		if (!this.userId) {
 			console.log("NOT LOGGED IN");
-			throw new Meteor.Error('error', 'You must be logged in to do this.');
+			throw new Meteor.Error('error', 'messages.login');
 			return false;
 		}
 

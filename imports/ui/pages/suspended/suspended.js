@@ -1,17 +1,18 @@
 import { Template } from 'meteor/templating'
 import { UserData } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
 
 import './suspended.html'
 
 const getName = (type) => {
 	const o = {
-		'cheating': 'You have been caught lazy answering rating questions',
-		'bad-coin': 'You\'ve submitted an invalid cryptocurrency',
-		'bad-wallet': 'Your wallet image was invalid',
-		'comment': 'Your comment has been flagged and deleted',
-		'redflags': 'Your redflag has been flagged and deleted',
-		'features': 'Your feature has been flagged and deleted'
+		'cheating': TAPi18n.__('user.suspended.cheating_info'),
+		'bad-coin': TAPi18n.__('user.suspended.bad_coin_info'),
+		'bad-wallet': TAPi18n.__('user.suspended.bad_wallet_info'),
+		'comment': TAPi18n.__('user.suspended.comment_info'),
+		'redflags': TAPi18n.__('user.suspended.redflag_info'),
+		'features': TAPi18n.__('user.suspended.features_info'),
+		'duplicate': TAPi18n.__('user.suspended.features_info')
 	}
 
 	return o[type]
@@ -45,7 +46,7 @@ Template.suspended.helpers({
 			_id: Meteor.userId()
 		})
 
-		return user && user.strikes && user.strikes.map(i => ({
+		return user && user.strikes && user.strikes.sort((i1, i2) => i2.time - i1.time).map(i => ({
 			date: moment(i.time).fromNow(),
 			name: getName(i.type)
 		}))

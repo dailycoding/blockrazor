@@ -1,6 +1,6 @@
 import { Template } from 'meteor/templating'
 import { WalletImages } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
 
 import './walletimages.html'
 
@@ -22,6 +22,12 @@ Template.walletImage.helpers({
 });
 
 Template.walletimages.events({
+  'error  img': function(e) {
+    // fires when a particular image doesn't exist in given path
+    if ($(e.target).attr('src') !== '/codebase_images/noimage.png') {
+      $(e.target).attr('src', '/codebase_images/noimage.png')
+    }
+  },
   'click .walletImageOpen': (event, templateInstance) => {
 
     $('#img_'+ event.currentTarget.id).modal('show');

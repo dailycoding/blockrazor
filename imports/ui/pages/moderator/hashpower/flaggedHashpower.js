@@ -1,8 +1,31 @@
 import { Template } from 'meteor/templating';
 import { HashHardware, HashPower, HashAlgorithm, HashUnits } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router';
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
 
 import './flaggedHashpower.html'
+
+var nextFlaggedHashpower = function () {
+    var currentId = FlowRouter.getParam('id');
+    var sample = _.sample(HashPower.find({ 
+		'_id' : { $ne : currentId }, 
+		'flags.0': { $exists: true },
+		"votes" : { 
+			"$not" : { 
+				"$elemMatch" : { "userId" : Meteor.userId()  } 
+			} 
+		},
+		"createdBy" : { $ne : Meteor.userId() }
+    }).fetch());
+
+    setTimeout(function () {
+        if (sample === undefined) {
+            FlowRouter.go('/moderator/flagged-hashpower');    
+        } else {
+            FlowRouter.go('/moderator/flagged-hashpower/' + sample._id);    
+        }
+        
+    }, 300);
+};
 
 Template.flaggedHashpower.onCreated(function() {
 	this.autorun(() => {
@@ -16,6 +39,9 @@ Template.flaggedHashpower.onCreated(function() {
 })
 
 Template.flaggedHashpower.helpers({
+	flaggedHashpower() {
+        return HashPower.findOne({ _id: FlowRouter.getParam('id') });
+    },
 	hashpower: () => HashPower.find({
 		'flags.0': { // if array has more than 0 elements
  			$exists: true
@@ -40,7 +66,7 @@ Template.flaggedHashpower.helpers({
 	    if (this.image) {
 	        return `${_hashPowerUploadDirectoryPublic}${this.image}`
 	    } else {
-	        return '/images/noimage.png'
+	        return '/codebase_images/noimage.png'
 	    }
 	},
 	voted: function() {
@@ -60,14 +86,17 @@ Template.flaggedHashpower.events({
 
         Meteor.call('hashPowerVote', this._id, type, (err, data) => {
             if (err && err.error === 'mod-only') {
-                sAlert.error('Only moderators can vote')
+                sAlert.error(TAPi18n.__('moderator.hashpower.only_mod'))
             }
 
             if (data === 'ok') {
-                sAlert.success('Flags were successfully removed.')
+                sAlert.success(TAPi18n.__('moderator.hashpower.success'))
             } else if (data === 'not-ok') {
-            	sAlert.success('Hash power data has been deleted.')
+            	sAlert.success(TAPi18n.__('moderator.hashpower.deleted'))
             }
         })
+	},
+	'click #skipChange': function (e) {
+        nextFlaggedHashpower();
     }
 })

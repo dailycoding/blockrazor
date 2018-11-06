@@ -1,9 +1,11 @@
 import { Meteor } from 'meteor/meteor'
 import { UserData, Wallet, Currencies, Bids, Auctions } from '/imports/api/indexDB'
 import { check } from 'meteor/check'
-import { segmentEvent } from '/imports/api/analytics.js';
+import { segmentEvent } from '/imports/api/analytics.js'
 
-const transfer = (to, from, message, amount, currency) => {
+const incr = 0.0001
+
+export const transfer = (to, from, message, amount, currency) => {
 	UserData.upsert({
 		_id: to
 	}, {
@@ -38,7 +40,7 @@ Meteor.methods({
 
 			if (options.amount && user && (options.baseCurrency === 'KZR' ? user.balance : (user.others || {})[options.baseCurrency]) > options.amount && options.amount > 0) {
 				if (options.timeout < new Date().getTime()) {
-					throw new Meteor.Error('Error.', 'Auction can\'t end in the past.')
+					throw new Meteor.Error('Error.', 'messages.auctions.past')
 				}
 
 				Auctions.insert({
@@ -53,9 +55,6 @@ Meteor.methods({
 						//you must define an event and can define multiple properties if required
 						let payload = {
 						    event: 'Created an Auction',
-						    properties: {
-						        auction: name
-						    }
 						}
 						//invoke segment function with the defined payload above
 						segmentEvent(payload);
@@ -63,10 +62,10 @@ Meteor.methods({
 				// reserve the amount
 				transfer(Meteor.userId(), 'Blockrazor', `${options.amount} ${options.baseCurrency} has been reserved from your account.`, -options.amount, options.baseCurrency)
 			} else {
-				throw new Meteor.Error('Error.', 'Insufficient funds.')
+				throw new Meteor.Error('Error.', 'messages.auctions.insufficient_funds')
 			}
 		} else {
-			throw new Meteor.Error('Error.', 'You have to be logged in.')
+			throw new Meteor.Error('Error.', 'messages.login')
 		}
 	},
 	checkAuctions: () => { // cron function, every minute
@@ -87,34 +86,74 @@ Meteor.methods({
 
 		if (auction && !auction.closed) {
 			if (new Date(auction.options.timeout).getTime() < new Date().getTime()) { // if it's done
-				if (auction.options.highest > auction.options.reserve) {
-					let winner = Bids.findOne({
-						auctionId: auctionId,
-						amount: auction.options.highest
-					})
+				if ((auction.options.highest > auction.options.reserve) || (auction.options.max > auction.options.reserve)) {
+					if (auction.options.highest < auction.options.reserve) {
+						auction.options.highest =  auction.options.reserve + 0.01 // ensure that the reserve is met if the max amount is bigger than the reserve value
+					}
 
-					let bids = Bids.find({
-						auctionId: auctionId,
-						amount: {
-							$ne: auction.options.highest
-						}
-					}).fetch()
+					let bids = auction.bids || []
 
 					bids.forEach(i => {
-						Meteor.call('cancelBid', i._id, (err, data) => {}) // remove all other bids
+						Meteor.call('cancelBid', auction._id, i.userId, (err, data) => {}) // remove all other bids
 					})
 
-					if (winner) {
+					if (auction.options.highestBidder) {
 						// Transfer the funds
-						transfer(winner.userId, 'Blockrazor', `${auction.options.amount} ${auction.options.baseCurrency} has been added to your account.`, auction.options.amount, auction.options.baseCurrency)
+						transfer(auction.options.highestBidder, 'Blockrazor', `${auction.options.amount} ${auction.options.baseCurrency} has been added to your account.`, auction.options.amount, auction.options.baseCurrency)
 						
-						transfer(winner.userId, auction.createdBy, `${winner.amount} ${auction.options.acceptedCurrency} has been removed from your account.`, -winner.amount, auction.options.acceptedCurrency)
+						transfer(auction.options.highestBidder, auction.createdBy, `${auction.options.highest} ${auction.options.acceptedCurrency} has been removed from your account.`, -auction.options.highest, auction.options.acceptedCurrency)
 					    
-						transfer(auction.createdBy, winner.userId, `${winner.amount} ${auction.options.acceptedCurrency} has been added to your account.`, winner.amount, auction.options.acceptedCurrency)
+						transfer(auction.createdBy, auction.options.highestBidder, `${auction.options.highest} ${auction.options.acceptedCurrency} has been added to your account.`, auction.options.highest, auction.options.acceptedCurrency)
+
+						// save the current USD price for currency
+						let currency
+
+						if (auction.options.baseCurrency === 'KZR' && auction.options.acceptedCurrency !== 'USD') {
+							currency = Currencies.findOne({
+								currencySymbol: auction.options.acceptedCurrency
+							})
+						} else if (auction.options.baseCurrency !== 'KZR' && auction.options.baseCurrency !== 'USD') {
+							currency = Currencies.findOne({
+								currencySymbol: auction.options.baseCurrency
+							})
+						}
+
+						if (currency && currency.price) {
+							Auctions.update({
+								_id: auctionId
+							}, {
+								$set: {
+									currentPrice: currency.price
+								}
+							})
+						}
+
+						// set the KZR price to the last price
+						let pricePerKZR
+
+						if (auction.options.baseCurrency === 'KZR') {
+							pricePerKZR = ((auction.options.highest || 0) / auction.options.amount)
+						} else {
+							pricePerKZR = (auction.options.highest || 0) !== 0 ? (auction.options.amount / (auction.options.highest || 0)) : 0
+						}
+						
+						Currencies.update({
+							currencySymbol: 'KZR'
+						}, {
+							$set: {
+								price: (pricePerKZR * ((currency && currency.price) || 1)).toFixed(2)
+							}
+						})
 					} else {
 						transfer(auction.createdBy, 'Blockrazor', `${auction.options.amount} ${auction.options.baseCurrency} has been returned your account.`, auction.options.amount, auction.options.baseCurrency)
 					}
 				} else {
+					let bids = auction.bids || []
+
+					bids.forEach(i => {
+						Meteor.call('cancelBid', auction._id, i.userId, (err, data) => {})
+					})
+
 					transfer(auction.createdBy, 'Blockrazor', `${auction.options.amount} ${auction.options.baseCurrency} has been returned your account.`, auction.options.amount, auction.options.baseCurrency)
 				}
 
@@ -126,10 +165,10 @@ Meteor.methods({
 					}
 				})
 			} else {
-				throw new Meteor.Error('Error.', 'Auction is still not over.')
+				throw new Meteor.Error('Error.', 'messages.auctions.not_over')
 			}
 		} else {
-			throw new Meteor.Error('Error.', 'Invalid auction.')
+			throw new Meteor.Error('Error.', 'messages.auctions.invalid_auction')
 		}
 	},
 	cancelAuction: (auctionId) => {
@@ -142,32 +181,65 @@ Meteor.methods({
 		if (auction) {
 			if (Meteor.userId() === auction.createdBy) {
 				if (auction.closed) {
-					throw new Meteor.Error('Error.', 'You can\'t cancel a closed auction')
+					throw new Meteor.Error('Error.', 'messages.auctions.cancel_closed')
 				}
 
-				let bids = Bids.find({
-					auctionId: auctionId
-				}).fetch()
+				let bids = auction.bids || []
 
 				if (bids && bids.length > 0) {
-					throw new Meteor.Error('Error.', 'You can\'t cancel an auction with active bids.')
+					throw new Meteor.Error('Error.', 'messages.auctions.cancel_active')
 				} else {				
 					Auctions.remove({
 						_id: auctionId
-					})
-
-					bids.forEach(i => {
-						Meteor.call('cancelBid', i._id, (err, data) => {}) // remove all other bids
 					})
 
 					// release the amount
 					transfer(Meteor.userId(), 'Blockrazor', `${auction.options.amount} ${auction.options.baseCurrency} has been returned your account.`, auction.options.amount, auction.options.baseCurrency)
 				}
 			} else {
-				throw new Meteor.Error('Error.', 'Auction is not yours.')
+				throw new Meteor.Error('Error.', 'messages.auctions.not_your')
 			}
 		} else {
-			throw new Meteor.Error('Error.', 'Invalid auction.')
+			throw new Meteor.Error('Error.', 'messages.auctions.invalid_auction')
+		}
+	},
+	placeAutoBid: (auctionId, options) => {
+		check(auctionId, String)
+		check(options, Object)
+
+		let auction = Auctions.findOne({
+			_id: auctionId
+		})
+
+		if (auction && auction._id !== 'top-currency') {
+			let lastBid = Bids.findOne({
+				auctionId: auction._id
+			}, {
+				sort: {
+					date: -1
+				}
+			})
+
+			if ((lastBid.amount + incr) <= auction.options.max) { // place the bid in this case
+				if (lastBid.userId !== auction.options.highestBidder) {
+					Auctions.update({
+						_id: auction._id
+					}, {
+						$set: {
+							'options.highest': lastBid.amount + incr // top it up
+						}
+					})
+
+					Bids.insert({
+						auctionId: auction._id,
+						userId: auction.options.highestBidder,
+						options: options,
+						amount: lastBid.amount + incr,
+						date: new Date().getTime(),
+						currency: options.currency
+					})
+				}
+			}
 		}
 	},
 	placeBid: (auctionId, amount, options) => {
@@ -175,9 +247,11 @@ Meteor.methods({
 		check(amount, Number)
 		check(options, Object)
 
-		if (Meteor.userId()) {
+		let userId = Meteor.userId()
+
+		if (userId) {
 			let user = UserData.findOne({
-				_id: Meteor.userId()
+				_id: userId
 	      	})
 	      	let acceptedCurrency = options.currency || 'KZR'  // for any auction
 	      	let bidPaymentCurrency = options.type === 'currency' ? 'KZR' : options.currency  // if currency auction, payment currency is always 'KZR'. other auctions, payment currency is given currency
@@ -187,39 +261,66 @@ Meteor.methods({
 					_id: auctionId
 				})
 
-        // for currency auction all currencies accepted (only the payment needs to perform via KZR)
-				if (auction && (auction._id === 'top-currency') ||  ((auction.options && auction.options.acceptedCurrency || 'KZR') === acceptedCurrency)) {
+        		// for currency auction all currencies accepted (only the payment needs to perform via KZR)
+				if (auction && (auction._id === 'top-currency') || ((auction.options && auction.options.acceptedCurrency || 'KZR') === acceptedCurrency)) {
+					let curBid = amount
+
 					if (auction._id !== 'top-currency') { // top currency aggregates all bids, others need a highest bid
 						if (auction.closed) {
-							throw new Meteor.Error('Error.', 'You can\'t bid on a closed currency.')
+							throw new Meteor.Error('Error.', 'messages.auctions.bid_closed')
 						}
 
-						if (auction.createdBy === Meteor.userId()) {
-							throw new Meteor.Error('Error.', 'You can\'t bid on your own auction.')
+						if (auction.createdBy === userId) {
+							throw new Meteor.Error('Error.', 'messages.auctions.bid_own')
+						}
+
+						if (amount <= ((auction.bids || []).filter(i => i.userId === userId)[0] || {}).amount) {
+							throw new Meteor.Error('Error.', 'messages.auctions.bid_smaller')
 						}
 
 						if (amount <= auction.options.highest) {
-							throw new Meteor.Error('Error.', 'Bid amount is not high enough.')
+							throw new Meteor.Error('Error.', 'messages.auctions.bid_not_high')
 						} else {
-							Auctions.update({
-								_id: auction._id
-							}, {
-								$set: {
-									'options.highest': amount
-								}
-							})
+							auction.options.max = auction.options.max || 0
+
+							if (userId === auction.options.highestBidder && amount > auction.options.max) { // update the max amount and that's all
+								Auctions.update({
+									_id: auction._id
+								}, {
+									$set: {
+										'options.highestBidder': userId,
+										'options.max': amount
+									}
+								})
+							}
+
+							if (amount >= (auction.options.max + incr)) {
+								curBid = (auction.options.max || 0) + incr
+							}
+
+							if (amount >= auction.options.max) {
+								Auctions.update({
+									_id: auction._id
+								}, {
+									$set: {
+										'options.highestBidder': userId,
+										'options.max': amount
+									}
+								})
+							}
+
+							if (userId !== auction.options.highestBidder) { // don't increase your bid without a valid reason
+								Auctions.update({
+									_id: auction._id
+								}, {
+									$set: {
+										'options.highest': curBid
+									}
+								})
+							}
 						}
 
-						let last = Bids.findOne({
-							userId: Meteor.userId(),
-							auctionId: auction._id
-						})
-
-						if (last) {
-							Meteor.call('cancelBid', last._id, (err, data) => {})
-						}
-
-						if (amount > auction.options.reserve) {
+						if (curBid > auction.options.reserve) {
 							Auctions.update({
 								_id: auction._id
 							}, {
@@ -228,29 +329,98 @@ Meteor.methods({
 								}
 							})
 						}
+					} else {
+						let currency = Currencies.findOne({
+							_id: options.currency
+						})
+
+						if (!currency) {
+							throw new Meteor.Error('Error', 'messages.auctions.unknown_currency')
+						}
 					}
 
-					Bids.insert({
-						auctionId: auctionId,
-						userId: Meteor.userId(),
-						options: options,
-						amount: amount,
-						date: new Date().getTime(),
-						currency: bidPaymentCurrency
-					})
+					if (userId !== (auction.options || {}).highestBidder) { // don't insert a new bid if the highest bidder remains
+						Bids.insert({
+							auctionId: auctionId,
+							userId: userId,
+							options: options,
+							amount: curBid,
+							date: new Date().getTime(),
+							currency: bidPaymentCurrency
+						})
+					}
 
-					transfer(user._id, 'Blockrazor', `${bidPaymentCurrency} has been reserved from your account for bidding on an auction.`, -amount, bidPaymentCurrency)
+					let remAmount = amount
+
+					if (auction._id !== 'top-currency') { // this data is only needed for regular auctions
+						let bids = auction.bids || []
+
+						if (!bids.some(i => {
+							if (i.userId === userId) {
+								remAmount = amount - i.amount
+
+								i.amount = amount
+
+								return true
+							}
+
+							return false
+						})) {
+							bids.push({
+								userId: userId,
+								amount: amount
+							})
+						}
+
+						Auctions.update({
+							_id: auction._id
+						}, {
+							$set: {
+								bids: bids
+							}
+						})
+
+						Meteor.call('placeAutoBid', auctionId, options, (err, data) => {})
+					}
+
+					transfer(user._id, 'Blockrazor', `${bidPaymentCurrency} has been reserved from your account for bidding on an auction.`, -remAmount, bidPaymentCurrency)
 				} else {
-					throw new Meteor.Error('Error.', `Currency ${options.currency} is not valid.`)
+					throw new Meteor.Error('Error.', `messages.auctions.unknown_currency`)
 				}
 			} else {
-				throw new Meteor.Error('Error.', 'Insufficient funds.')
+				throw new Meteor.Error('Error.', 'messages.auctions.insufficient_funds')
 			}
 		} else {
-			throw new Meteor.Error('Error.', 'Please log in first.')
+			throw new Meteor.Error('Error.', 'messages.login')
 		}
 	},
-	cancelBid: (bidId) => {
+	cancelBid: (auctionId, userId) => {
+		check(auctionId, String)
+		check(userId, String)
+
+		if (userId) {
+			let auction = Auctions.findOne({
+				_id: auctionId
+			})
+
+			if (auction) {
+				let bid = (auction.bids || []).filter(i => i.userId === userId)[0]
+
+				if (bid) {
+					bid.currency = auction.options.acceptedCurrency || 'KZR'
+
+					transfer(userId, 'Blockrazor', `${bid.amount} ${bid.currency} has been returned to your account.`, bid.amount, bid.currency)
+				} else {
+					throw new Meteor.Error('Error.', 'messages.auctions.bid_doesnt_exist')
+				}
+			} else {
+				throw new Meteor.Error('Error.', 'messages.auctions.auctin_doesnt_exist')
+			}
+		} else {
+			throw new Meteor.Error('Error.', 'messages.login')
+		}
+	},
+	cancelCurrencyBid: (bidId) => {
 		check(bidId, String)
 
 		if (Meteor.userId()) {
@@ -268,10 +438,10 @@ Meteor.methods({
 
 				transfer(Meteor.userId(), 'Blockrazor', `${bid.amount} ${bid.currency} has been returned to your account for cancelling a bid.`, bid.amount, bid.currency)
 			} else {
-				throw new Meteor.Error('Error.', 'Bid does not exist.')
+				throw new Meteor.Error('Error.', 'messages.auctions.bid_doesnt_exist')
 			}
 		} else {
-			throw new Meteor.Error('Error.', 'Please log in first.')
+			throw new Meteor.Error('Error.', 'messages.login')
 		}
 	},
 	drainTopAuction: (auctionId, drainRate) => {
@@ -363,7 +533,7 @@ Meteor.methods({
 				}
 			}
 		} else {
-			throw new Meteor.Error('Error.', 'Auction does not exist.')
+			throw new Meteor.Error('Error.', 'messages.auctions.auction_doesnt_exist')
 		}
 	}
 })

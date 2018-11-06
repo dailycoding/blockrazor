@@ -3,10 +3,21 @@ import {  ProfileImages, UserData, Wallet, ProblemComments, Features, Redflags, 
 import { check } from 'meteor/check'
 import { creditUserWith } from '/imports/api/utilities.js'
 
+import speakeasy from 'speakeasy'
+
 Meteor.methods({
   signedUpLastMonth: () => {
   	return Meteor.users.find({}).fetch().filter(i => new Date(i.createdAt) > (new Date().getTime() - 1000*60*60*24*30) /* 30 days */).length
   },
+    commentsLastMonth: () => {
+        // includes all added features (and feature comments), redflags (and redflag comments), summaries and problem comments
+        let features = Features.find({}).fetch().filter(i => new Date(i.createdAt) > (new Date().getTime() - 1000*60*60*24*30))
+        let redflags = Redflags.find({}).fetch().filter(i => new Date(i.createdAt) > (new Date().getTime() - 1000*60*60*24*30))
+        let summaries = Summaries.find({}).fetch().filter(i => new Date(i.createdAt) > (new Date().getTime() - 1000*60*60*24*30))
+        let problemComments = ProblemComments.find({}).fetch().filter(i => new Date(i.date) > (new Date().getTime() - 1000*60*60*24*30))
+        
+        return features.length + redflags.length + summaries.length + problemComments.length
+    },
   sidebarPreference: function(value, valueOnRecord) {
     //ignore request if valueOnRecord provided from beforeUnload hook that will not care if operations that decide if method should be called actually finish
     if (valueOnRecord && valueOnRecord == value){
@@ -30,6 +41,7 @@ Meteor.methods({
       }
     })
   },
+  // needs to be removed before launch
   addOthers: (currency, amount) => {
     UserData.update({
       _id: Meteor.userId()
@@ -113,13 +125,14 @@ Meteor.methods({
       }
     })
   },
-  userStrike: (userId, type, token) => {
+  userStrike: (userId, type, token, times) => {
+    times = times || 1
     if (token === 's3rv3r-only') {
       let user = UserData.findOne({
         _id: userId
       })
 
-      if (user && !user.moderator) {
+      if (user) {
         // add a strike to user's date
         UserData.update({
           _id: user._id
@@ -137,18 +150,18 @@ Meteor.methods({
           let val = i2.time > lastWeek ? 1 : 0
 
           return i1 + val
-        }, 0) + 1 : 0
+        }, 0) + times : times
 
         let lastMonth = new Date().getTime() - 24*60*60*1000*30 // one month (30 days average)
         let strikesMonth = user.strikes ? user.strikes.reduce((i1, i2) => {
           let val = i2.time > lastMonth ? 1 : 0
 
           return i1 + val
-        }, 0) + 1 : 0
+        }, 0) + times : times
 
         if (strikesWeek > 3 || strikesMonth > 6) {
           Meteor.users.update({
-            _id: Meteor.userId()
+            _id: userId
           }, {
             $set: {
               suspended: true
@@ -156,10 +169,10 @@ Meteor.methods({
           })
         }
       } else {
-        throw new Meteor.Error('Error.', 'Invalid user.')
+        throw new Meteor.Error('Error.', 'messages.users.invalid')
       }
     } else {
-      throw new Meteor.Error('Error.', 'This method is server only.')
+      throw new Meteor.Error('Error.', 'messages.server_only')
     }
   },
   applyForPardon: (reason) => {
@@ -175,12 +188,12 @@ Meteor.methods({
         }
       })
     } else {
-      throw new Meteor.Error('Error.', 'You need to be logged in.')
+      throw new Meteor.Error('Error.', 'messages.login')
     }
   },
   pardonVote: function(userId, type) {
     if (!Meteor.userId()) {
-      throw new Meteor.Error('Error.', 'Please log in first')
+      throw new Meteor.Error('Error.', 'messages.login')
     }
 
     let mod = UserData.findOne({
@@ -263,7 +276,7 @@ Meteor.methods({
           }
         })
       } else {
-        throw new Meteor.Error('Error.', 'Wrong id.')
+        throw new Meteor.Error('Error.', 'messages.users.wrong_id')
       }
               
       return 'not-ok'
@@ -373,8 +386,77 @@ Meteor.methods({
   getUserConnectionInfo: function() {
     return this.connection;
   },
+  verify2fa: function(token) {
+    check(token, String)
+
+    let user = Meteor.users.findOne({
+      _id: this.userId
+    })
+
+    if (user) {
+      if (user.enabled2fa) {
+        let verified = speakeasy.totp.verify({
+          secret: user.secret2fa,
+          encoding: 'base32',
+          token: token
+        })
+
+        if (verified) {
+          Meteor.users.update({
+            _id: this.userId,
+          }, {
+            $set: {
+              pass2fa: true
+            }
+          })
+
+          return true
+        } else {
+          if (~(user.backup2fa || []).indexOf(token)) {
+            let backup2fa = user.backup2fa
+
+            backup2fa = backup2fa.filter(i => i !== token)
+            backup2fa.push(('0000000' + Math.floor(Math.random() * 100000000)).slice(-8)) // reset the code
+
+            Meteor.users.update({
+              _id: this.userId,
+            }, {
+              $set: {
+                pass2fa: true,
+                backup2fa: backup2fa
+              }
+            })
+
+            return true
+          }
+
+          throw new Meteor.Error('messages.users.invalid_token')
+        }
+      }
+    }
+  },
+  regenerateBackup2fa: function() {
+    let codes = [...Array(10).keys()].map(i => ('0000000' + Math.floor(Math.random() * 100000000)).slice(-8))
+
+    Meteor.users.update({
+      _id: Meteor.userId()
+    }, {
+      $set: {
+        'backup2fa': codes
+      }
+    })
+  },
+  end2faSession: function() {
+    Meteor.users.update({
+      _id: this.userId,
+    }, {
+      $set: {
+        pass2fa: false
+      }
+    })
+  },
   'editProfile': function(data) {
-      if (!this.userId) { throw new Meteor.Error('error', 'please log in') };
+      if (!this.userId) { throw new Meteor.Error('error', 'messages.login') };
 
       //only update profile if data is true
       if (data) {
@@ -382,34 +464,76 @@ Meteor.methods({
           check(data.email, String)
           check(data.bio, String)
           check(data.username, String)
+          check(data.secret, Match.Maybe(String))
+          check(data.userToken, Match.Maybe(String))
+          check(data.status2fa, Boolean)
+
+          let user = Meteor.users.findOne({
+            _id: this.userId
+          })
+
+          let verified = false
+
+          if (data.status2fa && !user.enabled2fa) {
+            verified = speakeasy.totp.verify({
+              secret: data.secret,
+              encoding: 'base32',
+              token: data.userToken
+            })
+
+            if (!verified) {
+              throw new Meteor.Error('messages.users.error_2fa')
+            }
+          } else if (!data.status2fa && user.enabled2fa) {
+            verified = speakeasy.totp.verify({
+              secret: user.secret2fa,
+              encoding: 'base32',
+              token: data.userToken
+            })
+
+            verified = verified || ~(user.backup2fa || []).indexOf(data.userToken)
+
+            if (!verified) {
+              throw new Meteor.Error('messages.users.error_2fa')
+            }
+          }
+
+          let set = {
+            email: data.email,
+            username: data.username,
+            bio: data.bio
+          }
+
+          if (verified) {
+            set = _.extend(set, {
+              secret2fa: data.status2fa ? data.secret : '',
+              enabled2fa: data.status2fa,
+              pass2fa: true,
+              backup2fa: data.status2fa ? [...Array(10).keys()].map(i => ('0000000' + Math.floor(Math.random() * 100000000)).slice(-8)) : []
+            })
+          }
 
           Meteor.users.update({ _id: this.userId }, {
-                  $set: {
-                      email: data.email,
-                      username: data.username,
-                      bio: data.bio
-                  }
-              },
-              function(error) {
-                  console.log('editProfile method failed', error)
-              });
+            $set: set
+          }, function(error) {
+            console.log('editProfile method failed', error)
+          })
       }
-
   },
   uploadProfilePicture: (fileName, binaryData, md5) => {
       let md5validate = CryptoJS.MD5(CryptoJS.enc.Latin1.parse(binaryData)).toString()
       if (md5validate !== md5) {
-          throw new Meteor.Error('Error.', 'Failed to validate md5 hash.')
+          throw new Meteor.Error('Error.', 'messages.users.invalid_md5')
           return false
       }
       if (!Meteor.userId()) {
-          throw new Meteor.Error('Error.', 'You must be logged in to do this.');
+          throw new Meteor.Error('Error.', 'messages.login');
           return false
       }
 
       const fs = require('fs')
 
-      let mime = require('mime-types')
+      let mime = require('/imports/api/miscellaneous/mime').default
       let mimetype = mime.lookup(fileName)
       let validFile = _supportedFileTypes.includes(mimetype)
       let fileExtension = mime.extension(mimetype)
@@ -419,7 +543,7 @@ Meteor.methods({
       let insert = false
 
       if (!validFile) {
-          throw new Meteor.Error('Error.', 'File type not supported, png, gif and jpeg supported');
+          throw new Meteor.Error('Error.', 'messages.users.invalid_file');
           return false
       }
 
@@ -452,4 +576,188 @@ gm(filename)
     });
 
   },
+  possibleModerators: () => {
+    let possible = []
+    Meteor.users.find({}).fetch().forEach(i => {
+      let u = UserData.findOne({
+        _id: i._id
+      })
+
+      if (u) {
+        let flags = []
+        Object.keys(u.flags || {}).forEach(i => {
+          if (typeof u.flags[i] === 'object') {
+            Object.keys(u.flags[i]).forEach(j => {
+              if (u.flags[i][j]) {
+                flags.push(`${i}.${j}`)
+              }
+            })
+          }
+        })
+
+        let strikes = (u.strikes || []).filter(i => i.time > (new Date().getTime() - 1000*60*60*24*30))
+
+        if (!i.suspended && !u.moderator && flags.every(i => !i.startsWith('duplicate.')) && strikes.length === 0 && !(u.mod || {}).denied) { // three requirements, user is not a moderator, he has no duplicate flags and he has no strikes in the last 30 days
+          let features = Features.find({
+            createdBy: u._id
+          }).count()
+          let redflags = Redflags.find({
+            createdBy: u._id
+          }).count()
+          let summaries = Summaries.find({
+            createdBy: u._id
+          }).count()
+
+          let wallet = Wallet.find({
+            owner: u._id
+          }).fetch()
+
+          wallet = wallet.filter(i => {
+            return ~['anwserQuestion', 'newCurrency', 'hashReward'].indexOf(i.rewardType)
+          })
+
+          possible.push({
+            _id: u._id,
+            inputRanking: u.inputRanking,
+            totalInput: features + redflags + summaries,
+            totalBounties: wallet.length,
+          })
+        }
+      }
+    })
+
+    let maxTotalInput = possible.reduce((i1, i2) => i2.totalInput > i1 ? i2.totalInput : i1, 0) || 1
+    let maxTotalBounties = possible.reduce((i1, i2) => i2.totalBounties > i1 ? iw.totalBounties : i1, 0) || 1
+
+    possible = possible.map(i => _.extend(i, {
+      rating: (i.inputRanking + (i.totalInput / maxTotalInput) + (i.totalBounties / maxTotalBounties)) / 3
+    })).sort((i1, i2) => {
+      return i2.rating - i1.rating
+    })
+
+    possible.forEach((i, ind) => {
+      UserData.update({
+        _id: i._id
+      }, {
+        $set: {
+          'mod.data': _.extend(_.omit(i, '_id'), {
+            rank: ind + 1
+          })
+        }
+      })
+    }) // save data for all possible moderators
+
+    possible = possible.slice(0, Math.ceil(possible.length * 0.3))
+
+    UserData.update({
+      'mod.candidate': true
+    }, {
+      $set: {
+        'mod.candidate': false
+      }
+    }) // reset all flags before
+
+    possible.forEach(i => { // set the flag for all candidates
+      UserData.update({
+        _id: i._id
+      }, {
+        $set: {
+          'mod.candidate': true
+        }
+      })
+    })
+  },
+  modCandidateVote: function(id, type) {
+    if (!Meteor.userId()) {
+      throw new Meteor.Error('Error.', 'messages.login')
+    }
+
+    let mod = UserData.findOne({
+      _id: this.userId
+    }, {
+      fields: {
+        moderator: true
+      }
+    })
+
+    if (!mod || !mod.moderator) {
+      throw new Meteor.Error('Error.', 'mod-only')
+    }
+        
+    let user = UserData.findOne({
+      _id: id
+    })
+
+    if (!((user.mod.votes || {}).votes || []).filter(i => i.userId === this.userId).length) { // user hasn't voted yet
+      let ip = '0.0.0.0'
+
+      if (Meteor.isServer) {
+        ip = this.connection.clientAddress
+      }
+
+      UserData.update({
+        _id: user._id
+      }, {
+        $inc: {
+          'mod.votes.score': type === 'voteUp' ? 1 : -1, // increase or decrease the current score
+          [type === 'voteUp' ? 'mod.votes.upvotes' : 'mod.votes.downvotes']: 1 // increase upvotes or downvotes
+        },
+        $push: {
+          'mod.votes.votes': {
+            userId: this.userId,
+            type: type,
+            loggedIP: ip,
+            time: new Date().getTime()
+          }
+        }
+      })
+    }
+           
+    let approveChange = UserData.find({
+      _id: user._id
+    }, {
+      fields: {
+        mod: 1
+      } 
+    }).fetch()[0]
+
+    if (approveChange.mod.votes.score >= 3) {
+      UserData.update({
+        _id: user._id
+      }, {
+        $set: {
+          'mod.approved': true,
+          'mod.time': new Date().getTime(),
+          moderator: true
+        }
+      })
+
+      return 'ok'
+    }
+
+    if (approveChange.mod.votes.score <= -3) {
+      UserData.update({
+        _id: user._id
+      }, {
+        $set: {
+          'mod.denied': true,
+          'mod.time': new Date().getTime()
+        }
+      })
+
+      return 'not-ok'
+    }
+  }
 });
+
+if (Meteor.isDevelopment) {
+    Meteor.methods({
+        generateTestUser: () => {
+            Accounts.createUser({
+                username: 'testing',
+                password: 'testing',
+                email: 'testing@testing.test'
+            })
+        }
+    })
+}

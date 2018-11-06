@@ -9,11 +9,12 @@ import { UserData, ProfileImages, UsersStats } from '/imports/api/indexDB.js'
     })
 
     // only publish this data if the current user is a moderator
-    if (u.moderator) {
+    if (u && u.moderator) {
       return UserData.find({}, {
         fields: {
           sessionData: 1,
-          flags: 1 // publish only a limited set of fields to prevent security issues
+          flags: 1,
+          mod: 1 // publish only a limited set of fields to prevent security issues
         }
       })
     } else {
@@ -37,7 +38,8 @@ import { UserData, ProfileImages, UsersStats } from '/imports/api/indexDB.js'
         bountyPreference: 1,
         strikes: 1,
         inputRanking: 1,
-        others: 1
+        others: 1,
+        paymentId: 1
       }
     })
   })
@@ -54,7 +56,8 @@ import { UserData, ProfileImages, UsersStats } from '/imports/api/indexDB.js'
       pardon: 1,
       activity: 1,
       inputRanking: 1,
-      others: 1
+      others: 1,
+      paymentId: 1
     }
   }))
 
@@ -86,7 +89,8 @@ import { UserData, ProfileImages, UsersStats } from '/imports/api/indexDB.js'
           fullname: 1,
           profilePicture: 1,
           strikes: 1,
-          inputRanking: 1
+          inputRanking: 1,
+          mod: 1
         }
       })
     } else {
@@ -108,7 +112,10 @@ import { UserData, ProfileImages, UsersStats } from '/imports/api/indexDB.js'
 				profilePicture: 1,
         referral: 1,
         inviteCode: 1,
-        suspended: 1
+        suspended: 1,
+        pass2fa: 1,
+        enabled2fa: 1,
+        backup2fa: 1
 			}
 		})
 	})
@@ -117,6 +124,10 @@ import { UserData, ProfileImages, UsersStats } from '/imports/api/indexDB.js'
     return UserData.find({
       'pardon.status': 'new'
     })
+  })
+
+  Meteor.publish('userdata', () => {
+    return UserData.find({ })
   })
 
 	Meteor.publish('user', (slug) => {
@@ -150,11 +161,12 @@ import { UserData, ProfileImages, UsersStats } from '/imports/api/indexDB.js'
         email: 1,
         bio: 1,
         slug: 1,
-        profilePicture: 1
+        profilePicture: 1,
+        suspended: 1
       } // only show the absolutely required fields
     })
   })
 
   Meteor.publish("usersStats", ()=>{
-    return UsersStats.find({}, {fields: {connected: 1, created: 1}})
+    return UsersStats.find({}, {fields: {userIds: 1, created: 1}})
   })

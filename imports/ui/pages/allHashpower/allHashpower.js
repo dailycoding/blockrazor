@@ -1,6 +1,6 @@
 import { Template } from 'meteor/templating';
 import { HashHardware, HashAlgorithm, HashPower, HashUnits, UserData } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router';
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
 
 import './allHashpower.html'
 
@@ -16,7 +16,11 @@ Template.allHashpower.onCreated(function() {
 })
 
 Template.allHashpower.helpers({
-	hashpower: () => HashPower.find({}).fetch(),
+	hashpower: () => HashPower.find({}, {
+		sort: {
+			'createdAt': -1
+		}
+	}).fetch(),
 	hashDevice: function() {
 		return (HashHardware.findOne({
 			_id: this.device
@@ -42,7 +46,7 @@ Template.allHashpower.helpers({
 	    if (this.image) {
 	        return `${_hashPowerUploadDirectoryPublic}${this.image}`
 	    } else {
-	        return '/images/noimage.png'
+	        return '/codebase_images/noimage.png'
 	    }
 	},
 	showFlagReason: function() {
@@ -67,9 +71,15 @@ Template.allHashpower.events({
 
 		Meteor.call('flagHashpower', this._id, $(`#js-flag-reason-${this._id}`).val(), (err, data) => {
 			if (err) {
-				sAlert.error(err.reason)
+				sAlert.error(TAPi18n.__(err.reason))
 			} else {
-				sAlert.success('Flagged successfully.')
+				sAlert.success(TAPi18n.__('hashpower.all.success'))
+				//send an event to segment
+        let payload = {
+            event: 'Flagged hash power',
+        }
+
+        segmentEvent(payload);
 
 				// remove the reason field
 				let l = templateInstance.flags.get()
@@ -83,8 +93,15 @@ Template.allHashpower.events({
 
 		Meteor.call('deleteHashpower', this._id, (err, data) => {
 			if (err) {
-				sAlert.error(err.reason)
-			} 
+				sAlert.error(TAPi18n.__(err.reason))
+			}else{
+				//send an event to segment
+        let payload = {
+            event: 'Deleted hash power',
+        }
+
+        segmentEvent(payload);
+			}
 		})		
 	}
 })

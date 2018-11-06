@@ -37,12 +37,12 @@ export const saveCommunity = new ValidatedMethod({
                             time: data.time || 0
                         })
                     } else {
-                        throw new Meteor.Error('Error.', 'Invalid community url.')
+                        throw new Meteor.Error('Error.', 'messages.communities.invalid')
                     }
                 }
             })
         } else {
-            throw new Meteor.Error('Error.', 'You have to be logged in.')
+            throw new Meteor.Error('Error.', 'messages.login')
         }
     }
 })
@@ -222,19 +222,6 @@ Meteor.methods({
             }
         }
     },
-    getLastCommunityAnswer: () => {
-        return Ratings.find({
-            $or: [{
-                catagory: 'community'
-            }, {
-                context: 'community'
-            }]
-        }, {
-            sort: {
-                answeredAt: -1
-            }
-        }).fetch()[0]
-    },
     deleteCommunityRatings: () => {
         let rem = Ratings.find({
             $or: [{
@@ -354,17 +341,17 @@ Meteor.methods({
     uploadCommunityPicture: (fileName, binaryData, md5) => {
         let md5validate = CryptoJS.MD5(CryptoJS.enc.Latin1.parse(binaryData)).toString()
         if (md5validate !== md5) {
-            throw new Meteor.Error('Error.', 'Failed to validate md5 hash.')
+            throw new Meteor.Error('Error.', 'messages.communities.invalid_md5')
             return false
         }
         if (!Meteor.userId()) {
-            throw new Meteor.Error('Error.', 'You must be logged in to do this.');
+            throw new Meteor.Error('Error.', 'messages.login');
             return false
         }
 
         const fs = require('fs')
 
-        let mime = require('mime-types')
+        let mime = require('/imports/api/miscellaneous/mime').default
         let mimetype = mime.lookup(fileName)
         let validFile = _supportedFileTypes.includes(mimetype)
         let fileExtension = mime.extension(mimetype)
@@ -374,7 +361,7 @@ Meteor.methods({
         let insert = false
 
         if (!validFile) {
-            throw new Meteor.Error('Error.', 'File type not supported, png, gif and jpeg supported');
+            throw new Meteor.Error('Error.', 'messages.communities.invalid_file');
             return false
         }
 
@@ -397,7 +384,7 @@ Meteor.methods({
     },
     flagCommunityImage: function(imageId,rejectReason) {
         if (!this.userId) {
-            throw new Meteor.Error('error', 'please log in')
+            throw new Meteor.Error('error', 'messages.login')
         }
 
         let community = Communities.findOne({
@@ -449,11 +436,11 @@ Meteor.methods({
     },
     approveCommunityImage: function(imageId) {
         if (!this.userId) {
-            throw new Meteor.Error('error', 'please log in')
+            throw new Meteor.Error('error', 'messages.login')
         }
 
         if (Communities.findOne({_id: imageId}).createdBy === this.userId) {
-            throw new Meteor.Error('Error', 'You can\'t approve your own item.')
+            throw new Meteor.Error('Error', 'messages.communities.approve_own')
         }
 
         Communities.update({

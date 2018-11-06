@@ -1,17 +1,17 @@
 import { Template } from 'meteor/templating';
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
 import { Currencies, UserData, Features, HashPower } from '/imports/api/indexDB.js'
 
 import './userProfile.html'
 
 const getName = (type) => {
 	const o = {
-		'cheating': 'Caught lazy answering rating questions',
-		'bad-coin': 'Submitted an invalid cryptocurrency',
-		'bad-wallet': 'Submitted an invalid wallet image',
-		'comment': 'Submitted a comment that has been flagged and deleted',
-		'redflags': 'Submitted a red flag that has been flagged and deleted',
-		'features': 'Submitted a feature that has been flagged and deleted'
+		'cheating': TAPi18n.__('user.profile.cheating_info'),
+		'bad-coin': TAPi18n.__('user.profile.bad_coin_info'),
+		'bad-wallet': TAPi18n.__('user.profile.bad_wallet_info'),
+		'comment': TAPi18n.__('user.profile.comment_info'),
+		'redflags': TAPi18n.__('user.profile.redflag_info'),
+		'features': TAPi18n.__('user.profile.features_info')
 	}
 
 	return o[type]
@@ -24,6 +24,7 @@ Template.userProfile.onCreated(function() {
 		SubsCache.subscribe('approvedcurrencies')
 		SubsCache.subscribe('comments')
 		SubsCache.subscribe('hashpower')
+		SubsCache.subscribe('userdata')
 	})
 
 	this.user = new ReactiveVar()
@@ -36,18 +37,71 @@ Template.userProfile.onCreated(function() {
 })
 
 Template.userProfile.events({
-    'click .hashRigImage': function(event) {
+    'click .hashRigImage': function(event, templateInstance) {
+        $('.imageModal').modal('show')
 
-    	//open modal
-        $('.imageModal').modal('show');
+	    let largeImage = event.target.src.replace('_thumbnail', '')
+	    $('.imageModalSrc').attr('src', largeImage)
+    },
+    'click #profilePicture': (event, templateInstance) => {
+        event.preventDefault()
 
-        //get large image filename
-	    let largeImage = event.target.src.replace('_thumbnail','');
-	    $(".imageModalSrc").attr("src",largeImage);
+        $('#imageInput').click()
+    },
+    'change #imageInput': (event, templateInstance) => {
+        let file = event.target.files[0]
+        let uploadError = false
+        let mimetype = mime.lookup(file)
+        let fileExtension = mime.extension(file.type)
 
+        if (file.size > _profilePictureFileSizeLimit) {
+            sAlert.error(TAPi18n.__('user.edit.too_big'))
+            uploadError = true
+        }
+
+        if (!_supportedFileTypes.includes(file.type)) {
+            sAlert.error(TAPi18n.__('user.edit.must_be_image'))
+            uploadError = true
+        }
+
+        if (file){
+        	$('#uploadLabel').removeClass('btn-success')
+        	$('#uploadLabel').addClass('btn-primary')
+        	$('button').attr('disabled', 'disabled')
+        	$('.uploadText').html(`<i class='fa fa-circle-o-notch fa-spin'></i> ${TAPi18n.__('user.edit.uploading')}`)
+
+
+        	// Only upload if above validation are true
+        	if (!uploadError) {
+            	let reader = new FileReader()
+            
+            	reader.onload = fEvent => {
+                	let binary = reader.result
+                	let md5 = CryptoJS.MD5(CryptoJS.enc.Latin1.parse(binary)).toString()
+                
+                	Meteor.call('uploadProfilePicture', file.name, reader.result, md5, (error, result) => {
+                        if (error) {
+                        	sAlert.error(error.message);
+                        
+                        	$('#uploadLabel').removeClass('btn-success')
+                        	$('#uploadLabel').addClass('btn-primary')
+                        	$(".uploadText").html(TAPi18n.__('user.edit.upload'))
+                    	} else {                        
+                    		$('#js-image').val(`${md5}.${fileExtension}`)
+                    		
+                    		$('button').attr('disabled', false)
+                    		$('#uploadLabel').addClass('btn-success')
+                    		$('.uploadText').html(TAPi18n.__('user.edit.change'))
+                    		$('#profilePicture').attr('src', `${_profilePictureUploadDirectoryPublic}${md5}_thumbnail.${fileExtension}`)
+                    	}
+                	})
+           		}
+
+           		reader.readAsBinaryString(file)
+        	}
+    	}
     }
-
-});
+})
 
 Template.userProfile.helpers({
 		isYourPage() {
@@ -56,8 +110,18 @@ Template.userProfile.helpers({
 		    }
 		},
     balance() {
-      let balance = UserData.findOne({}, { fields: { balance: 1 } }).balance
-      return Number( balance.toPrecision(3) )
+		let profileUser = Template.instance().user.get()
+
+		let balance = UserData.findOne({}, { fields: { balance: 1 } }).balance
+		let profileUserData = UserData.findOne({ _id : Template.instance().user.get()._id }, { fields: { balance: 1 } })
+
+		if (profileUserData !== undefined) {
+			let balance = profileUserData.balance
+			if (typeof(balance) === 'string') { return balance }
+			return Number( balance.toPrecision(3) ).toFixed(11).replace(/\.?0+$/, "")
+		}
+
+		return 0
   	},
 	hashPowerUploadDirectoryPublic: () => _hashPowerUploadDirectoryPublic,
 	user: () => Template.instance().user.get(),
@@ -86,6 +150,9 @@ Template.userProfile.helpers({
 			_id: (Template.instance().user.get() || {})._id
 		}) || {}
 	},
+	rating: function() {
+		return ((this.mod || {}).data || {}).rating !== undefined ? `${this.mod.data.rating.toFixed(2)} (#${this.mod.data.rank})` : 'N\\A' 
+	},
 		HashPower: () => {
 		return HashPower.find({createdBy:Template.instance().user._id})
 		 
@@ -113,7 +180,10 @@ Template.userProfile.helpers({
 	            limit: 10 // show 10 lates comments
 	        }).fetch()
 	    },
-	fixed: val => val.toFixed(2), // 2 decimals
+	fixed: val => {
+    val = val ? val : 0
+    return val.toFixed(2) // 2 decimals
+  },
 	commentMeta: function() {
 		// we have to find comment's parent in order to see its metadata (e.g. where it was posted)
 		let depth = this.depth

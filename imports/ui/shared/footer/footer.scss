@@ -1,0 +1,23 @@
+/* Shared - Footer
+-------------------------------------------------- */
+
+/* Simple sticky */
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 5em;
+  background-color: #eceeef;
+  a{
+    display: inline;
+  }
+  .copyright{
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.app-footer.footer{
+  margin-left: 0 !important;
+  justify-content: center;
+}

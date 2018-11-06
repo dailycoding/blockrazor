@@ -1,5 +1,6 @@
 import { Template } from 'meteor/templating'
-import { Currencies, Ratings, WalletImages } from '/imports/api/indexDB.js';
+import { Currencies, Ratings, WalletImages } from '/imports/api/indexDB.js'
+import('sweetalert2').then(swal => window.swal = swal.default)
 
 import './currencyChoices.html'
 
@@ -77,7 +78,7 @@ Template.currencyChoices.events({
   'click #populateRatings': function() {
     Meteor.call('populateRatings', function(error, result) {
         if (error) {
-            console.log(error.reason);
+            console.log(TAPi18n.__(error.reason));
         } else {
 
             let walletsAdded = Ratings.find({
@@ -96,21 +97,21 @@ Template.currencyChoices.events({
             if (!walletCheckCount) {
                 swal({
                     icon: "error",
-                    text: "Please upload at least two wallet images to continue.",
-                    button: { className: 'btn btn-primary' }
+                    text: TAPi18n.__('wallet.please_upload_2'),
+                    confirmButtonClass: 'btn btn-primary'
                 });
             } else if (walletCheckCount >= 3 && walletCheckCount < 6) {
                 swal({
                     icon: "error",
-                    text: "Please upload one more wallet image to continue.",
-                    button: { className: 'btn btn-primary' }
+                    text: TAPi18n.__('wallet.please_upload_1'),
+                    confirmButtonClass: 'btn btn-primary'
                 });
             } else {
 				swal({
                     icon: "warning",
-					title: "We detect lazy answering!",
+					title: TAPi18n.__('codebase.detect'),
                     text: _lazyAnsweringWarningText,
-                    button: { text: 'continue', className: 'btn btn-primary' }
+                    confirmButtonClass: 'btn btn-primary'
                 });
             }
 

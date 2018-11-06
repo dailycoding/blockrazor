@@ -4,7 +4,7 @@ import { Currencies } from '../../../api/indexDB.js'
 import { GraphData } from '../../../api/indexDB.js'
 import Chart from 'chart.js';
 
-import './currency-info.scss'
+import './currency.scss'
 import "../../components/radarGraph.js"
 import './fundamentalMetrics.html'
 
@@ -28,6 +28,9 @@ Template.fundamentalMetrics.events({
 Template.fundamentalMetrics.helpers({
   options: function (){
     return {
+      animation: {
+        duration: 0
+      },
       responsive:  false,
       defaultFontColor: 'red',
       tooltips: {enabled: false},
@@ -93,7 +96,7 @@ Template.fundamentalMetrics.onRendered(function (){
       type: 'doughnut',
       // The data for our dataset
       data: {
-          labels: ["Founder(s) share: " + currencyData.premine, "Mined coins: " + currencyData.circulating, "Not yet mined: " + (currencyData.maxCoins - currencyData.circulating)],
+          labels: [TAPi18n.__('currency.fundamental.share') + currencyData.premine, TAPi18n.__('currency.fundamental.mined') + currencyData.circulating, TAPi18n.__('currency.fundamental.not_mined') + (currencyData.maxCoins - currencyData.circulating)],
           datasets: [{
             data: [(((currencyData.premine / currencyData.maxCoins) * 100).toFixed()), ((((currencyData.circulating - currencyData.premine) / currencyData.maxCoins) * 100).toFixed()), ((((currencyData.maxCoins - currencyData.circulating)/currencyData.maxCoins) * 100).toFixed())],
             backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f"]
@@ -102,9 +105,13 @@ Template.fundamentalMetrics.onRendered(function (){
 
       // Configuration options go here
       options: {
+        animation: {
+          duration: 0
+        },
         tooltips: {enabled: false},
         responsive: false,
-        maintainAspectRatio: false,
+        maintainAspectRatio: true,
+        aspectRatio: 1,
         title: {display: false},
         legend: {
           display: true,

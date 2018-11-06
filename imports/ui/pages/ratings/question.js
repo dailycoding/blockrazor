@@ -1,6 +1,6 @@
 import { Template } from 'meteor/templating';
 import { Currencies, Ratings } from '/imports/api/indexDB.js';
-import swal from 'sweetalert';
+import('sweetalert2').then(swal => window.swal = swal.default)
 
 import './question.html'
 import './ratings.scss'
@@ -53,7 +53,9 @@ Template.question.helpers({
 Template.question.events({
   'error img': function(e) {
       // fires when a particular image doesn't exist in given path
-      $(e.target).attr('src','/images/noimage.png'); 
+      if ($(e.target).attr('src') !== '/codebase_images/noimage.png') {
+        $(e.target).attr('src', '/codebase_images/noimage.png')
+      }
   },
   'mouseover .choice': function(){
     $('.choice').css('cursor', 'pointer');
@@ -83,7 +85,7 @@ Template.question.events({
 					swal({
 						icon: "error",
 						text: _lazyAnsweringErrorText,
-						button: { className: 'btn btn-primary' }
+						confirmButtonClass: 'btn btn-primary'
 					});
 				}
 			}
@@ -92,8 +94,8 @@ Template.question.events({
                 if (templateInstance.cnt++ === 0) {
 					swal({
 						icon: "warning",
-						text: 'Your answer is in contradiction with your previous answers. Please try again. If this persists, your progress will be purged and bounties will be nullified.',
-						button: { className: 'btn btn-primary' }
+						text: TAPi18n.__('codebase.contradicts'),
+						confirmButtonClass: 'btn btn-primary'
 					});
                 } else {
                     Meteor.call('deleteWalletRatings', (err, data) => {})
@@ -101,7 +103,7 @@ Template.question.events({
 					swal({
 						icon: "error",
 						text: _lazyAnsweringErrorText,
-						button: { className: 'btn btn-primary' }
+						confirmButtonClass: 'btn btn-primary'
 					});
                 }
             }
@@ -114,7 +116,7 @@ Template.question.events({
 				swal({
 					icon: "error",
 					text: _lazyAnsweringErrorText,
-					button: { className: 'btn btn-primary' }
+					confirmButtonClass: 'btn btn-primary'
 				});
             }
         })

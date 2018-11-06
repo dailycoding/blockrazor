@@ -1,0 +1,7 @@
+<template name="removeExchanges">
+    {{#if isModerator}}
+        {{ nextExchange exchange }}
+    {{else}}
+    <h5>{{_ "moderator.mod_only"}}</h5>
+    {{/if}}
+</template>

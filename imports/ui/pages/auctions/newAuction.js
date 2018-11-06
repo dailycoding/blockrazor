@@ -1,6 +1,6 @@
 import { Template } from 'meteor/templating'
 import { UserData } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
 
 import './newAuction.template.html'
 
@@ -12,7 +12,21 @@ Template.newAuction.onCreated(function() {
 	})
 
   this.baseCurrency = new ReactiveVar('KZR')
-  this.auctionPeriods = [{'hours':1,'label':'1 hour'}, {'hours':3,'label':'3 hours'}, {'hours':6,'label':'6 hours'}, {'hours':24,'label':'1 day'}, {'hours':72,'label':'3 days'}, {'hours':120,'label':'5 days'}, {'hours':240,'label':'10 days'} ]
+  this.auctionPeriods = [{
+  	'hours':1,'label':TAPi18n.__('auctions.new.one_hour')
+  }, {
+  	'hours':3,'label':TAPi18n.__('auctions.new.three_hours')
+  }, {
+  	'hours':6,'label':TAPi18n.__('auctions.new.six_hours')
+  }, {
+  	'hours':24,'label': TAPi18n.__('auctions.new.one_day')
+  }, {
+  	'hours':72,'label':TAPi18n.__('auctions.new.three_days')
+  }, {
+  	'hours':120,'label':TAPi18n.__('auctions.new.five_days')
+  }, {
+  	'hours':240,'label':TAPi18n.__('auctions.new.ten_days')
+  } ]
 })
 
 Template.newAuction.helpers({
@@ -37,28 +51,34 @@ Template.newAuction.events({
 		templateInstance.baseCurrency.set($(event.currentTarget).val())
 	},
 	'submit #js-form': (event, templateInstance) => {
-		event.preventDefault()
+		 event.preventDefault()
 
-		if (parseFloat($('#js-amount').val()) > 0 && $('#js-name').val() && $('#js-end').val() && $('#js-reserve').val()) {
-			Meteor.call('newAuction', $('#js-name').val(), '', {
-				amount: parseFloat($('#js-amount').val()),
-				baseCurrency: $('#js-bcur').val(),
-				acceptedCurrency: $('#js-acur').val(),
-				timeout: new Date().getTime() + $('#js-end').val() * 60 * 60 * 1000,  // add selected period to current timestamp
-				reserve: parseFloat($('#js-reserve').val()),
-				reserveMet: parseFloat($('#js-reserve').val()) === 0
-			}, (err, data) => {
-				if (err) {
-					sAlert.error(err.reason)
-				} else {
-					sAlert.success('Auction created.')
+	    $("#js-form").addClass('was-validated');
 
-					FlowRouter.go('/auctions')
-				}
-			})
-		} else {
-			sAlert.error('Some fields are missing.')
-		}
+	    if(!$('#js-reserve').val()){
+	    	$('#js-reserve').val('0')
+	    }
+
+	    //if the form is invalid do not submit and display errors to user
+	    if ($("#js-form")[0].checkValidity()) {
+	        //form looks good, call method
+	        Meteor.call('newAuction', $('#js-name').val(), '', {
+	            amount: parseFloat($('#js-amount').val()),
+	            baseCurrency: $('#js-bcur').val(),
+	            acceptedCurrency: $('#js-acur').val(),
+	            timeout: new Date().getTime() + $('#js-end').val() * 60 * 60 * 1000, // add selected period to current timestamp
+	            reserve: parseFloat($('#js-reserve').val()),
+	            reserveMet: parseFloat($('#js-reserve').val()) === 0
+	        }, (err, data) => {
+	            if (err) {
+	                sAlert.error(TAPi18n.__(err.reason))
+	            } else {
+	            	
+	                FlowRouter.go('/auctions')
+	            }
+	        })
+	    }
+
 	},
 	'click #js-cancel': (event, templateInstance) => {
 		event.preventDefault()

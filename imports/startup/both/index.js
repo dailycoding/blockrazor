@@ -17,6 +17,7 @@ import '/imports/api/features/methods'
 import '/imports/api/redflags/methods'
 import '/imports/api/exchanges/methods'
 import '/imports/api/coins/methods'
+import '/imports/api/miscellaneous/mime'
 import '/imports/api/wallet/methods'
 import '/imports/api/activityLog/methods'
 import '/imports/api/developers/methods'
@@ -31,6 +32,9 @@ import '/imports/api/common/votes'
 import '/imports/api/bounties/methods.js'
 import '/imports/api/ratings/methods'
 import '/imports/api/distribution/methods'
+import '/imports/api/launchEmails/methods' //delete me after launch
+import '/imports/api/encryption/methods'
+import '/imports/api/translations/methods'
 
 import './routes.js'
 

@@ -1,11 +1,12 @@
 <template name="messageitem">
-  <div class="card">
-  <div class="card-block">
-    <p class="card-text">{{content}}</p>
-  </div>
-  <div class="card-footer text-muted">
-    Recieved {{time}} from {{from}}
-  </div>
-</div>
-
+  {{#if href}}<a href="{{href}}" style="text-decoration: none;"><span class="list-group-item list-group-item-action">
+  	{{content}} <br />
+     <small>{{_ "activity.received" time from}}</small>   
+  </span></a>
+  {{else}}
+  <span class="list-group-item list-group-item-action">
+  	{{content}} <br />
+     <small>{{_ "activity.received" time from}}</small>   
+  </span>
+  {{/if}}
 </template>

@@ -1,9 +1,35 @@
 import { Accounts } from 'meteor/accounts-base';
 import '/imports/startup/client';
-import { UserData, Features, Summaries, Redflags, Currencies } from '/imports/api/indexDB.js';
-window.Currencies = Currencies
+import {FlowRouter} from 'meteor/ostrio:flow-router-extra';
+window.FlowRouter = FlowRouter
 
-const collections = { Features, Summaries, Redflags }
+import { colStub } from '/imports/ui/components/compatability/colStub'
+import { moment } from '/imports/ui/components/compatability/moment'
+
+window.moment = moment // stub the moment package so we can dynamically import it without breaking anything
+
+import('moment').then(moment => {
+    let oldRef = window.moment 
+
+    window.moment = moment.default
+
+    oldRef().change() // notify all helpers and handlers that moment has been imported
+})
+
+UserData = Features = Summaries = Redflags = colStub // stub collections until they're loaded
+
+import('/imports/api/indexDB').then(u => {
+    UserData = u.UserData
+    Features = u.Features
+    Summaries = u.Summaries
+    Redflags = u.Redflags
+
+    collections = { Features, Summaries, Redflags } // update references
+
+    colStub.change()
+})
+
+let collections = { Features, Summaries, Redflags }
 
 import Cookies from 'js-cookie'
 
@@ -30,7 +56,7 @@ Template.registerHelper('doesCoinImageExist', function(img) {
       let thumbnail_filename = img.split('.')[0] + '_thumbnail.' + img.split('.')[1];
     	return _coinUpoadDirectoryPublic + thumbnail_filename;
     }else{
-    	return '/images/noimage.png'
+    	return '/codebase_images/noimage.png'
     }
 })
 
@@ -76,7 +102,7 @@ Template.registerHelper('slugify', function(author) {
 })
 
 Template.registerHelper('relativeTime', function(date) {
-  var timePassed = moment(date).fromNow();
+  var timePassed = window.moment(date).fromNow();
   return timePassed;
 });
 
@@ -87,13 +113,21 @@ Template.registerHelper('nlToBr', function(value) {
 });
 
 Template.registerHelper('hasUserVoted', (collection, collectionId, direction) => {
-	var doc = collections[collection].findOne(collectionId);
-	var downVoted = doc.downVoted;
-	var appealVoted = doc.appealVoted;
+	var doc = collections[collection].findOne(collectionId)
 
-	if (direction === 'down') { return _.include(downVoted, Meteor.userId()) }
-	return _.include(appealVoted, Meteor.userId());
-});
+    if (doc) {
+    	var downVoted = doc.downVoted
+    	var appealVoted = doc.appealVoted
+
+    	if (direction === 'down') {
+            return _.include(downVoted, Meteor.userId())
+        }
+
+    	return _.include(appealVoted, Meteor.userId())
+    }
+
+    return false
+})
 
 Template.registerHelper('profilePictureByID', (id) => {
 
@@ -105,9 +139,24 @@ console.log(profilePicture)
 
 return _profilePictureUploadDirectoryPublic + profilePicture.profilePicture.small;
 }else{
-    return '/images/noprofile.png'
+    return '/codebase_images/noprofile.png'
 }
 
+});
+
+Template.registerHelper('profilePictureBySlug', (slug) => {
+  
+  if(slug){
+    let user = Meteor.users.findOne({
+      slug: slug
+    },{fields:{profilePicture:1}})
+  
+    return user.profilePicture != undefined ? _profilePictureUploadDirectoryPublic + user.profilePicture.small : '/codebase_images/noprofile.png';
+  
+  }else{
+      return '/codebase_images/noprofile.png'
+  }
+  
 });
 
 Template.registerHelper('profilePicture', (pic) => {
@@ -115,7 +164,7 @@ Template.registerHelper('profilePicture', (pic) => {
     if (pic) {
         return _profilePictureUploadDirectoryPublic + pic
     } else {
-        return '/images/noprofile.png'
+        return '/codebase_images/noprofile.png'
     }
 });
 

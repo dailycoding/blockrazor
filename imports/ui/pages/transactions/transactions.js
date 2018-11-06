@@ -1,6 +1,6 @@
 import { Template } from 'meteor/templating'
 import { Wallet } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
 
 import './transactions.html'
 
@@ -25,28 +25,30 @@ Template.transactions.onCreated(function() {
 		Meteor.call('transactions', FlowRouter.getParam('page') || '1', Template.instance().rewardType.get(),  (err, data) => {
 			this.transactions.set(data)
 		})
-	})
+		Meteor.call('transactionCount',Template.instance().rewardType.get(), (err, data) => { // get the total nubmer of transactions for pagination
+			this.transactionsCount.set(data)
+		})
 
-	Meteor.call('transactionCount', (err, data) => { // get the total nubmer of transactions for pagination
-		this.transactionsCount.set(data)
-	})
-
-	Meteor.call('totalAmount', (err, data) => { // get the total nubmer of transactions for pagination
-	    if (err) {
-	        console.log(err)
-	    } else {
-	        this.total.set(data)
-	    }
+		Meteor.call('totalAmount', (err, data) => { // get the total nubmer of transactions for pagination
+		    if (err) {
+		        console.log(err)
+		    } else {
+		        this.total.set(data)
+		    }
+		})
 	})
 })
 
 Template.transactions.helpers({
+	activePage(page) {
+		if (page === parseInt(FlowRouter.getParam('page'))) return 'active'
+	},
 	currency: function() {
 		return this.currency || 'KZR'
 	},
 	transactions: () => Template.instance().transactions.get(),
 	from: function() {
-		return (this.from === 'System' || this.from === 'Blockrazor') ? 'Master wallet' : (Meteor.users.findOne({
+		return (this.from === 'System' || this.from === 'Blockrazor') ? TAPi18n.__('transactions.master') : (Meteor.users.findOne({
 			_id: this.from
 		}) || {}).username || ''
 	},
@@ -97,14 +99,20 @@ Template.transactions.helpers({
 })
 
 Template.transactions.events({
-    'change .rewardTypeFilter': function(event) {
-        Template.instance().rewardType.set(event.target.value)
-    },
-    'click .clearFilter': function(event) {
-        Template.instance().rewardType.set(false);
-
-        $(".rewardTypeFilter option").filter(function() {
-            return $(this).text() == "--Select transaction type--";
-        }).prop('selected', true);
+    'click .form-check-input': function(event, templateInstance) {
+			if (templateInstance.$('input:checked').length > 0) {
+				if (event.target.value === 'all') {
+					Template.instance().rewardType.set(false)
+				} else {
+					templateInstance.$('input:checked').each(function() {
+						if ($(this).val() !== $(event.currentTarget).val()) {
+							$(this).prop('checked', false);
+						}
+					});
+					Template.instance().rewardType.set(event.target.value)
+				}
+			} else {
+				Template.instance().rewardType.set(' ')
+			}
     }
 });

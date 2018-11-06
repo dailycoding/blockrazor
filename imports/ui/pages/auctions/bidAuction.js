@@ -1,6 +1,6 @@
 import { Template } from 'meteor/templating'
 import { Auctions, Bids, UserData, Currencies } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
 
 import './bidAuction.template.html'
 
@@ -12,6 +12,17 @@ Template.bidAuction.onCreated(function() {
 		SubsCache.subscribe('publicUserData')
 		SubsCache.subscribe('approvedcurrencies')
 	})
+})
+
+
+Template.bidAuction.onRendered(function () {
+	const instance = Template.instance();
+	Meteor.setTimeout(() => {
+		instance.$("#js-amount").on("input", function () {
+			this.value = this.value.slice(0, this.maxLength);
+		});
+	}, 0);
+
 })
 
 Template.bidAuction.helpers({
@@ -48,11 +59,14 @@ Template.bidAuction.helpers({
 	auction: () => Auctions.findOne({
 		_id: FlowRouter.getParam('id')
 	}),
+	myMax: function() {
+		return this.options.highestBidder === Meteor.userId()
+	},
 	bids: () => Bids.find({
 		auctionId: FlowRouter.getParam('id')
 	}, {
 		sort: {
-			date: -1
+			amount: -1
 		}
 	}).fetch().slice(0, 10),
 	balance: () => {
@@ -75,12 +89,12 @@ Template.bidAuction.helpers({
 	winner: function() {
 		let bid = Bids.findOne({
 			auctionId: this._id,
-			amount: this.options.highest
+			userId: this.options.highestBidder
 		})
 
 		return bid && (Meteor.users.findOne({
 			_id: bid.userId
-		}) || {}).username || 'No winner'
+		}) || {}).username || TAPi18n.__('auctions.bid.no_winner')
 	},
 	remTime: function() {
 		return moment(this.options.timeout).fromNow()
@@ -100,13 +114,18 @@ Template.bidAuction.events({
 				currency: auction.options.acceptedCurrency
 			}, (err, data) => {
 				if (err) {
-					sAlert.error(err.reason)
+					sAlert.error(TAPi18n.__(err.reason))
 				} else {
-					sAlert.success('Bid successfully placed.')
+					sAlert.success(TAPi18n.__('auctions.bid.bid_placed'))
+					let payload = {
+            			event: 'Placed a bid on an auction',
+       				}
+
+        			segmentEvent(payload);
 				}
 			})
 		} else {
-			sAlert.error('Some fields are missing.')
+			sAlert.error(TAPi18n.__('auctions.bid.fields_missing'))
 		}
   },
   'click .js-cancel': function(event, templateInstance) {
@@ -114,10 +133,16 @@ Template.bidAuction.events({
 
     Meteor.call('cancelAuction', this._id, (err, data) => {
         if (!err) {
-            sAlert.success('Successfully cancelled.')
+            sAlert.success(TAPi18n.__('auctions.bid.cancelled'))
             FlowRouter.go('/auctions')
+
+            let payload = {
+            	event: 'Cancelled an auction',
+       		}
+
+        	segmentEvent(payload);
         } else {
-            sAlert.error(err.reason)
+            sAlert.error(TAPi18n.__(err.reason))
         }
     })
 },

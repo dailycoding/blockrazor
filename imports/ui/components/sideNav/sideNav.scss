@@ -1,18 +1,16 @@
 #sidebar {
   position: fixed;
   top: 60px !important;
-  overflow-y: hidden;
-  min-width: 225px;
-  max-width: 225px;
-  min-height: 100vh;
-  margin-left: -225px;
+  min-width: 245px;
+  max-width: 245px;
+  margin-left: -245px;
   background: #ddd;
   transition: all 0.2s ease;
   z-index: 9;
   &.active {
     margin-left: 0;
     + .app-content{
-      margin-left: 225px;
+      margin-left: 245px;
     }
   }
   .sub-menu{
@@ -56,22 +54,24 @@
 
 /** following styles added after sidebar submenu concept implemented **/
 .nav-side-menu-container {
-  overflow-y: scroll;
-  max-height: calc(100vh - 60px);
-  position: absolute;
-  left: 0;
-  right: -25px;
-
   .sign-in-button {
     margin-bottom: 15px;
   }
 }
+.nav-side-close {
+  position:  absolute;
+  top: 0;
+  bottom: 0;
+  display:  flex;
+  align-items:  center;
+  right: -25px;
+  justify-content:  center;
+  text-align:  center;
+}
 
 .nav-side-menu {
-  font-size: 12px;
   font-weight: 200;
   background-color: #ddd;
-  width: 225px;
   height: 100%;
   color: #e1ffff;
   position: relative;
@@ -137,15 +137,16 @@
       a {
         padding-left:50px;
       }
-      li.active, li.active a {
-        color: #000;
+      .active {
+        border-left: 3px solid #000 !important;
+        background-color: #484d53;
       }
     }
   }
   ul.active,
   li.active {
-    border-left: 3px solid #d19b3d;
-    background-color: #4f5b69;
+    border-left: 3px solid #000 !important;
+    background-color: #c6c6c6;
   }
   ul :not(collapsed) .arrow:before,
   li :not(collapsed) .arrow:before {
@@ -159,3 +160,44 @@
   }
 }
  
+/**** sss ***/
+
+.nav-side-menu {
+  li {
+    a {
+      i{
+        padding-left: 0;
+        &.fas, &.fab {
+            color: #000;
+            margin: 0 10px 0 0;
+            &:before {
+              font-size: 16px;
+              display: inline-block;
+              vertical-align: middle;
+              color: #000;
+          }
+        }
+      }
+    }
+  }
+}
+ 
+
+#sidebar {
+  ul {
+    li {
+      &.active {
+        a {
+            border-left: none;
+        }
+      }
+      a {
+          border-left: 3px solid transparent;
+      }
+    }
+  }
+}
+
+.child_menu_list li a i:before {
+    color: #fff !important;
+}

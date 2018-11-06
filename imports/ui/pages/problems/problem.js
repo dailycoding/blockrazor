@@ -1,7 +1,7 @@
 import { Template } from 'meteor/templating'
 import { UserData, Problems } from '/imports/api/indexDB'
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
-import swal from 'sweetalert'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
+import('sweetalert2').then(swal => window.swal = swal.default)
 
 import './problem.html'
 import './problemImages'
@@ -22,7 +22,7 @@ Template.problem.onCreated(function() {
 
 Template.problem.onRendered(function() {
 	$.fn.editable.defaults.mode = 'inline' // display them inline
-  	$.fn.editableform.buttons = `<button type="submit" class="btn btn-primary btn-sm editable-submit"><i class="fa fa-check"></i></button><button type="button" class="btn btn-default btn-sm editable-cancel"><i class="fa fa-close"></i></button>` // custom buttons with fa icons
+  	$.fn.editableform.buttons = `<button type="submit" class="btn btn-primary btn-sm editable-submit"><i class="fa fa-check"></i></button><button type="button" class="btn btn-default btn-sm editable-cancel"><i class="fa fa-times"></i></button>` // custom buttons with fa icons
 
 	let editables = ['header', 'text']
 
@@ -30,16 +30,16 @@ Template.problem.onRendered(function() {
 	    if ($(this).text() !== val) {
 	    	Meteor.call('editProblem', FlowRouter.getParam('id'), $(this).attr('id'), val, (err, data) => {
 	    		if (!err) {
-	    			sAlert.success('Successfully edited.')
+	    			sAlert.success(TAPi18n.__('problems.problem.success'))
 	    		} else {
-	    			sAlert.error(err.reason)
+	    			sAlert.error(TAPi18n.__(err.reason))
 	    		}
 	    	})
 
 	    	return ''
 	    }
 
-	    return 'Please change the value if you want to propose a change.'
+	    return TAPi18n.__('problems.problem.change_data')
 	}
 
 	this.autorun(() => {
@@ -133,9 +133,9 @@ Template.problem.events({
 
 		Meteor.call('addProblemCredit', FlowRouter.getParam('id'), Number($('#js-credit').val()), (err, data) => {
 			if (err) {
-				sAlert.error(err.reason)
+				sAlert.error(TAPi18n.__(err.reason))
 			} else {
-				sAlert.success('Credit added.')
+				sAlert.success(TAPi18n.__('problems.problem.credit_added'))
 			}
 		})
 	},
@@ -144,9 +144,9 @@ Template.problem.events({
 
 		Meteor.call('removeProblemCredit', FlowRouter.getParam('id'), (err, data) => {
 			if (err) {
-				sAlert.error(err.reason)
+				sAlert.error(TAPi18n.__(err.reason))
 			} else {
-				sAlert.success('Credit removed.')
+				sAlert.success(TAPi18n.__('problems.problem.credit_removed'))
 			}
 		})
 	},
@@ -155,7 +155,7 @@ Template.problem.events({
 
 		Meteor.call('cancelProblem', FlowRouter.getParam('id'), (err, data) => {
 			if (!err) {
-				sAlert.success('Cancelled.')
+				sAlert.success(TAPi18n.__('problems.problem.cancelled'))
 			} else {
 				sAlert.error(err.reasom)
 			}
@@ -166,7 +166,7 @@ Template.problem.events({
 
 		Meteor.call('giveUpProblem', FlowRouter.getParam('id'), (err, data) => {
 			if (!err) {
-				sAlert.success('Successfully gave up.')
+				sAlert.success(TAPi18n.__('problems.problem.gave_up'))
 			} else {
 				sAlert.error(err.reasom)
 			}
@@ -177,7 +177,7 @@ Template.problem.events({
 
 		Meteor.call('solveProblem', FlowRouter.getParam('id'), (err, data) => {
 			if (!err) {
-				sAlert.success('Successfully marked as solved. You\'ll be rewarded if the solution is accepted.')
+				sAlert.success(TAPi18n.__('problems.problem.marked_solved'))
 			} else {
 				sAlert.error(err.reasom)
 			}
@@ -187,7 +187,7 @@ Template.problem.events({
 		event.preventDefault()
 
 		if($('#js-fork').val()=="" || $('#js-issue').val() ==""){
-				sAlert.error('Please ensure both fields are populated')
+				sAlert.error(TAPi18n.__('problems.problem.both_fields'))
 
 		}else{
 
@@ -196,9 +196,9 @@ Template.problem.events({
 			issue: $('#js-issue').val()
 		}, (err, data) => {
 			if (!err) {
-				sAlert.success('The problem is yours. You have 5 days to solve it.')
+				sAlert.success(TAPi18n.__('problems.problem.problem_taken'))
 			} else {
-				sAlert.error(err.reason)
+				sAlert.error(TAPi18n.__(err.reason))
 			}
 		})
 	}

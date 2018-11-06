@@ -1,19 +1,25 @@
-
 <template name="wallet">
-
   <div class="wallet-outer">
-    <h4>My Wallet</h4><br/>
     {{> notLoggedIn}}
   </div>
   <div class="wallet-outer">
+    {{#if newWallet}}
+    <div class="alert alert-success alert-dismissible fade show" role="alert"> 
+      <h5 class="text-center">Welcome to Blockrazor!</h5>
+      <p class="text-center mb-0">Your wallet has been created. Why not head over to the <a href="/bounties">Bounty list</a> and earn your first Rozar!</p> 
+      <button type="button" class="close" id="js-welcome-msg" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    {{/if}}
     <div class="input-group">
-      <input type="number" step="0.01" min="0" id="js-amount" name="amount" placeholder="0"  class="form-control">
+      <input type="number" step="any" min="0" 
+      id="js-amount" name="amount" maxlength="10" placeholder="0"  class="form-control">
       <select id="js-cur">
         <option value="USD">USD</option>
         <option value="ETH">ETH</option>
-        <option value="XMR">XMR</option>
       </select>
-      <button id="js-add" class="btn btn-primary">Deposit</button>
+      <button id="js-add" class="btn btn-primary">{{_ "kzrWallet.deposit"}}</button>
     </div>
   </div>
   <div class="wallet-outer">
@@ -21,60 +27,60 @@
       <div class="currency-card col-sm-12 col-md-6 col-lg-3">
         <div class="card-content card-kzr" data-value="kzr">
           <div class="card-main">
-            <img src="{{currencyLogo 'krazor'}}" style="width:100px">
+            <img class="card-logo" src="{{currencyLogo 'krazor'}}">
             <h4>
-				<b>Krazor</b>
-				{{#if currencyNotifications currency}}
-					<span class="badge badge-success">{{currencyNotifications currency}}</span>
+				<b>{{_ "kzrWallet.krazor"}}</b>
+				{{#if currencyNotifications "KZR"}}
+					<span class="badge badge-success">{{currencyNotifications "KZR"}}</span>
 				{{/if}}
 			</h4>
-            <p class="see-transactions-label">click to see transactions</p>
-            <p class="balance">Total Balance: <br/><b>{{balance}}</b></p>
+            <p class="see-transactions-label">{{_ "kzrWallet.transactions"}}</p>
+            <p class="balance">{{_ "kzrWallet.total"}} <br/><b>{{balance}}</b></p>
           </div>
         </div>
       </div>
       <div class="currency-card col-sm-12 col-md-6 col-lg-3">
         <div class="card-content card-usd" data-value="usd">
           <div class="card-main">
-            <img src="{{currencyLogo 'krazor'}}" style="width:100px">
+            <i class="fas fa-dollar-sign"></i>
             <h4>
-				<b>US Dollar </b>
+				<b>{{_ "kzrWallet.usd"}}</b>
 				{{#if currencyNotifications "USD"}}
 					<span class="badge badge-success">{{currencyNotifications "USD"}}</span>
 				{{/if}}
 			</h4>
-            <p class="see-transactions-label">click to see transactions</p>
-            <p class="balance">Total Balance: <br/><b>{{otherBalance "USD"}}</b></p>
+            <p class="see-transactions-label">{{_ "kzrWallet.transactions"}}</p>
+            <p class="balance">{{_ "kzrWallet.total"}} <br/><b>{{otherBalance "USD"}}</b></p>
           </div>
         </div>
       </div>
       <div class="currency-card col-sm-12 col-md-6 col-lg-3">
         <div class="card-content card-eth" data-value="eth">
           <div class="card-main">
-            <img src="{{currencyLogo 'ethereum'}}" style="width:100px">
+            <i class="fab fa-ethereum"></i>
             <h4>
-				<b>Ethereum</b>
+				<b>{{_ "kzrWallet.eth"}}</b>
 				{{#if currencyNotifications "ETH"}}
 					<span class="badge badge-success">{{currencyNotifications "ETH"}}</span>
 				{{/if}}
 			</h4>
-            <p class="see-transactions-label">click to see transactions</p>
-            <p class="balance">Total Balance: <br/><b>{{otherBalance "ETH"}}</b></p>
+            <p class="see-transactions-label">{{_ "kzrWallet.transactions"}}</p>
+            <p class="balance">{{_ "kzrWallet.total"}} <br/><b>{{otherBalance "ETH"}}</b></p>
           </div>
         </div>
       </div>
       <div class="currency-card col-sm-12 col-md-6 col-lg-3">
         <div class="card-content card-xmr" data-value="xmr">
           <div class="card-main">
-            <img src="{{currencyLogo 'monero'}}" style="width:100px">
+            <i class="fab fa-monero"></i>
             <h4>
-				<b>Monero</b>
+				<b>{{_ "kzrWallet.xmr"}}</b>
 				{{#if currencyNotifications "XMR"}}
 					<span class="badge badge-success">{{currencyNotifications "XMR"}}</span>
 				{{/if}}
 			</h4>
-            <p class="see-transactions-label">click to see transactions</p>
-            <p class="balance">Total Balance: <br/><b>{{otherBalance "XMR"}}</b></p>
+            <p class="see-transactions-label">{{_ "kzrWallet.transactions"}}</p>
+            <p class="balance">{{_ "kzrWallet.total"}} <br/><b>{{otherBalance "XMR"}}</b></p>
           </div>
         </div>
       </div>

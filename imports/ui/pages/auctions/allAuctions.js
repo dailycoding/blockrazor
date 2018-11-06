@@ -1,6 +1,7 @@
 import { Template } from 'meteor/templating'
 import { Auctions, UserData, Currencies } from '/imports/api/indexDB.js'
-import { FlowRouter } from 'meteor/staringatlights:flow-router'
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra'
+import { segmentEvent } from '/imports/api/analytics.js'
 
 import './allAuctions.template.html'
 
@@ -13,6 +14,12 @@ Template.allAuctions.onCreated(function() {
 
     this.open = new ReactiveVar(true)
     this.closed = new ReactiveVar()
+
+        let payload = {
+            event: 'Opened all auctions',
+        }
+
+        segmentEvent(payload);
 })
 
 Template.allAuctions.helpers({
@@ -79,13 +86,13 @@ Template.allAuctions.helpers({
         return moment(this.options.timeout).fromNow()
     },
     status: function() {
-        return this.closed ? 'CLOSED' : 'OPEN'
+        return this.closed ? TAPi18n.__('auctions.all.closed') : TAPi18n.__('auctions.all.open')
     },
     statusColor: function() {
         return this.closed ? 'red' : 'green'
     },
     verb: function() {
-        return this.closed ? 'Ended' : 'Ends'
+        return this.closed ? TAPi18n.__('auctions.all.ended') : TAPi18n.__('auctions.all.ends')
     }
 })
 

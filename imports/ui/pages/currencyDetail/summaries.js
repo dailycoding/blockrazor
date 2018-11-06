@@ -94,22 +94,22 @@ Template.summaries.events({
         let len = $(event.currentTarget).val().length
 
         if (len >= max) {
-            $('#charNum').text(' you have reached the limit')
+            $('#charNum').text(TAPi18n.__('currency.summaries.limit'))
         } else {
-            $('#charNum').text(`${max - len} characters left`)
+            $('#charNum').text(`${max - len} ${TAPi18n.__('currency.summaries.left')}`)
         }
     },
     'click .submitNewSummary': function(event, templateInstance) {
         event.preventDefault()
 
         if (!Meteor.user()) {
-            sAlert.error('You must be logged in to add a new summary!')
+            sAlert.error(TAPi18n.__('currency.summaries.must_login'))
         }
         
         const data = $('#summary').val()
 
         if(data.length < 10 || data.length > 500) {
-            sAlert.error('That entry is too short, or too long.')
+            sAlert.error(TAPi18n.__('currency.summaries.too_short'))
         } else {
             let res 
             try {
@@ -121,17 +121,33 @@ Template.summaries.events({
                 if (!err) {
                     $('#summary').val('')
                     $('#addNewSummary').collapse('hide');
+                    $(".cancelNewSummary").hide();
+                    $(".submitNewSummary").hide();
+                    $(".addNewSummaryContainer").hide();
+                    $(".showAddNewSummary").show();
                     
-                    sAlert.success('Thanks! Your summary has been successfully added!')
+                    sAlert.success(TAPi18n.__('currency.summaries.added'))
                 } else {
-                    sAlert.error(err.reason)
+                    sAlert.error(TAPi18n.__(err.reason))
                 }
             })
         }
     },
     'click .showAddNewSummary': (event, templateInstance) => {
-        event.preventDefault()
-
-        $('#addNewSummary').toggle()
+      event.preventDefault()
+      $('#addNewSummary').collapse('show');
+      $("#summary").focus();
+      $(".cancelNewSummary").show();
+      $(".submitNewSummary").show();
+      $(".addNewSummaryContainer").show();
+      $(".showAddNewSummary").hide();
+    },
+    'click .cancelNewSummary': (event, templateInstance) => {
+      event.preventDefault()
+      $('#addNewSummary').collapse('hide');
+      $(".cancelNewSummary").hide();
+      $(".submitNewSummary").hide();
+      $(".addNewSummaryContainer").hide();
+      $(".showAddNewSummary").show();
     }
 })
